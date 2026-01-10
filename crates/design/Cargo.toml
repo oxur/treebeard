@@ -1,0 +1,14 @@
+[package]
+name = "treebeard-design"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Design documentation and architectural decision records for Treebeard"
+keywords = ["documentation", "design"]
+categories = ["development-tools"]
+
+[dependencies]
+# No dependencies - this is a documentation-only crate

@@ -1,0 +1,21 @@
+[package]
+name = "treebeard"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "A tree-walking interpreter for Rust's syn AST - language-agnostic execution engine"
+keywords = ["interpreter", "ast", "syn", "rust", "vm"]
+categories = ["development-tools", "parser-implementations"]
+
+[dependencies]
+syn = { workspace = true }
+quote = { workspace = true }
+proc-macro2 = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+dashmap = { workspace = true }
+
+[dev-dependencies]
