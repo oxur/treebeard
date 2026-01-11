@@ -138,7 +138,7 @@ pub trait LanguageFrontend {
 | `syn` has hundreds of types | Large implementation surface | Implement incrementally; "not yet implemented" errors for esoteric features |
 | `syn` types are large | Memory overhead | Use `Arc<syn::Expr>` for sharing; implement custom compact representation for hot paths |
 | `syn` doesn't track semantic info | Need separate type info | Maintain parallel `TypeInfo` map keyed by node ID |
-| `syn` version coupling | Breaking changes possible | Re-export `syn` from `treebeard-core`; pin to specific version |
+| `syn` version coupling | Breaking changes possible | Re-export `syn` from `treebeard`; pin to specific version |
 
 **Alternative considered: Custom IR**
 
@@ -189,8 +189,8 @@ Current Oxur AST Bridge capabilities:
 ┌──────────────────────────────────────────────────┼───────────┐
 │                    Treebeard                     │           │
 │  ┌────────────────┐  ┌────────────────┐  ┌───────▼────────┐  │
-│  │ treebeard-core │  │ treebeard-repl │  │ treebeard-     │  │
-│  │  (evaluator)   │  │  (session mgmt)│  │ interface      │  │
+│  │   treebeard    │  │ treebeard-repl │  │ treebeard-*    │  │
+│  │    (core)      │  │    (future)    │  │   (future)     │  │
 │  └────────────────┘  └────────────────┘  └────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -524,7 +524,7 @@ impl OwnershipTracker {
 
 ## Part 4: Module Specifications
 
-### 4.1 treebeard-core
+### 4.1 treebeard Create
 
 ```rust
 // ═══════════════════════════════════════════════════════════════════════
@@ -748,12 +748,12 @@ impl<F: LanguageFrontend> Repl<F> {
 **Non-responsibilities:**
 
 - Parsing (delegated to frontend)
-- Evaluation (delegated to treebeard-core)
+- Evaluation (delegated to treebeard)
 - UI rendering (delegated to client)
 
 **Dependencies:**
 
-- `treebeard-core`
+- `treebeard`
 
 **Dependents:**
 
@@ -834,12 +834,12 @@ impl Compiler {
 
 **Non-responsibilities:**
 
-- Evaluation (treebeard-core)
+- Evaluation (treebeard)
 - Source parsing (frontend)
 
 **Dependencies:**
 
-- `treebeard-core`
+- `treebeard`
 - `libloading` (dynamic library loading)
 - `cargo` (for building crates)
 
@@ -891,7 +891,7 @@ pub struct FunctionEntry {
 **Non-responsibilities:**
 
 - Actual compilation (treebeard-loader)
-- Evaluation (treebeard-core)
+- Evaluation (treebeard)
 
 ---
 
@@ -924,7 +924,7 @@ pub struct FunctionEntry {
 
 | Component | Status | Replacement |
 |-----------|--------|-------------|
-| **Core evaluation** | 25% | Replace with `treebeard-core` |
+| **Core evaluation** | 25% | Replace with `treebeard` |
 | **Function definitions** | 60% (`deffn`) | Keep syntax, use Treebeard eval |
 | **Partial special forms** | 20% (`if`) | Replace with Treebeard |
 
