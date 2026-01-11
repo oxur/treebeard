@@ -1,24 +1,23 @@
 ---
 number: 1
 title: "Treebeard Implementation Guide v3"
-author: "Duncan McGreggor"
+author: "doing ONE"
 component: All
 tags: [change-me]
 created: 2026-01-10
 updated: 2026-01-10
-state: Draft
+state: Overwritten
 supersedes: null
 superseded-by: null
-version: 1.1
+version: 1.0
 ---
-
 
 # Treebeard Implementation Guide v3
 
 **A Tree-Walking Interpreter for Rust's `syn` AST**
 
-**Date:** 2026-01-10
-**Version:** 3.0
+**Date:** 2026-01-10  
+**Version:** 3.0  
 **Status:** Final Architecture Specification
 
 ---
@@ -65,7 +64,7 @@ The proposed trait:
 ```rust
 pub trait LanguageFrontend {
     fn parse(&self, source: &str) -> Result<Vec<syn::Item>, ParseError>;
-    fn expand_macros(&self, items: Vec<syn::Item>, env: &Environment)
+    fn expand_macros(&self, items: Vec<syn::Item>, env: &Environment) 
         -> Result<Vec<syn::Item>, MacroError>;
     fn format_error(&self, error: &EvalError, source: &str) -> String;
     fn name(&self) -> &str;
@@ -88,28 +87,28 @@ pub trait LanguageFrontend {
 pub trait LanguageFrontend {
     /// Parse source into syn AST items
     fn parse(&self, source: &str) -> Result<Vec<syn::Item>, ParseError>;
-
+    
     /// Expand macros in context of environment
     /// Returns (expanded_items, updated_macro_env)
     fn expand_macros(
-        &self,
-        items: Vec<syn::Item>,
+        &self, 
+        items: Vec<syn::Item>, 
         macro_env: &MacroEnvironment
     ) -> Result<(Vec<syn::Item>, MacroEnvironment), MacroError>;
-
+    
     /// Format an evaluation error for display
     fn format_error(&self, error: &EvalError, source: &str) -> String;
-
+    
     /// Format a value for REPL display
     fn format_value(&self, value: &Value, depth: usize) -> String;
-
+    
     /// Language metadata
     fn name(&self) -> &str;
     fn file_extension(&self) -> &str;
-
+    
     /// Custom REPL commands
     fn repl_commands(&self) -> Vec<ReplCommand> { vec![] }
-
+    
     /// Syntax highlighting hints (for REPL)
     fn syntax_categories(&self) -> SyntaxCategories { SyntaxCategories::default() }
 }
@@ -149,7 +148,6 @@ S-expressions → Custom IR → Evaluation
 ```
 
 **Rejected because:**
-
 - Adds translation layer (more code, more bugs)
 - Duplicates `syn`'s functionality
 - Complicates compilation path (IR → syn → tokens)
@@ -160,7 +158,6 @@ S-expressions → Custom IR → Evaluation
 **The AST Bridge is the foundation.**
 
 Current Oxur AST Bridge capabilities:
-
 - ✅ S-expression lexer (100%)
 - ✅ S-expression parser (100%)
 - ✅ S-expression printer (100%)
@@ -173,25 +170,25 @@ Current Oxur AST Bridge capabilities:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                   Oxur (oxur-runtime)                        │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │  oxur-reader   │→ │  oxur-macros   │→ │  ast-bridge    │  │
+│                     Oxur (oxur-vm)                            │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐ │
+│  │  oxur-reader   │→│  oxur-macros   │→│  ast-bridge    │  │
 │  │  (S-exp parse) │  │  (expand)      │  │  (95% done!)   │  │
-│  └────────────────┘  └────────────────┘  └───────┬────────┘  │
-│                                                  │           │
-│           Implements LanguageFrontend trait      │           │
-└──────────────────────────────────────────────────┼───────────┘
-                                                   │
-═══════════════════════════════════════════════════╪════════════
-                        syn AST boundary           │
-═══════════════════════════════════════════════════╪════════════
-                                                   │
-┌──────────────────────────────────────────────────┼───────────┐
-│                    Treebeard                     │           │
-│  ┌────────────────┐  ┌────────────────┐  ┌───────▼────────┐  │
-│  │ treebeard-core │  │ treebeard-repl │  │ treebeard-     │  │
-│  │  (evaluator)   │  │  (session mgmt)│  │ interface      │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
+│  └────────────────┘  └────────────────┘  └───────┬────────┘ │
+│                                                   │          │
+│           Implements LanguageFrontend trait       │          │
+└───────────────────────────────────────────────────┼──────────┘
+                                                    │
+════════════════════════════════════════════════════╪══════════
+                        syn AST boundary            │
+════════════════════════════════════════════════════╪══════════
+                                                    │
+┌───────────────────────────────────────────────────┼──────────┐
+│                    Treebeard                       │          │
+│  ┌────────────────┐  ┌────────────────┐  ┌───────▼────────┐ │
+│  │ treebeard-core │  │ treebeard-repl │  │ treebeard-     │ │
+│  │  (evaluator)   │  │  (session mgmt)│  │ interface      │ │
+│  └────────────────┘  └────────────────┘  └────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -218,50 +215,50 @@ Current Oxur AST Bridge capabilities:
 ### 2.2 Dependency Graph
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     DEPENDENCY GRAPH                                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────┐                                                │
-│  │  syn AST        │ ← Already exists (Rust ecosystem)              │
-│  │  (foundation)   │                                                │
-│  └────────┬────────┘                                                │
-│           │                                                         │
-│           ▼                                                         │
-│  ┌─────────────────┐                                                │
-│  │  AST Bridge     │ ← Already 95% (Oxur)                           │
-│  │  (S-exp ↔ syn)  │                                                │
-│  └────────┬────────┘                                                │
-│           │                                                         │
-│           ▼                                                         |
-│  ┌─────────────────────────────────────────────────────┐            |
-│  │              PHASE 1: Core Evaluator                │            |
-│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐        │            |
-│  │  │   Value   │  │Environment│  │ Evaluator │        │            |
-│  │  │   repr    │→ │  bindings │→ │  syn::*   │        │            |
-│  │  └───────────┘  └───────────┘  └───────────┘        │            |
-│  └──────────────────────────┬──────────────────────────┘            |
-│                             │                                       |
-│           ┌─────────────────┼─────────────────┐                     |
-│           │                 │                 │                     |
-│           ▼                 ▼                 ▼                     |
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                |
-│  │  PHASE 2:   │   │  PHASE 3:   │   │  PHASE 4:   │                |
-│  │   Macros    │   │    REPL     │   │  Compiler   │                |
-│  │  (Oxur-     │   │(Integration)│   │ (Escape     │                |
-│  │  specific)  │   │             │   │  hatch)     │                |
-│  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘                |
-│         │                 │                 │                       |
-│         └─────────────────┴─────────────────┘                       |
-│                           │                                         |
-│                           ▼                                         |
-│                  ┌─────────────────┐                                |
-│                  │   PHASE 5:      │                                |
-│                  │   Ownership     │                                |
-│                  │   (Optional)    │                                |
-│                  └─────────────────┘                                |
-│                                                                     |
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         DEPENDENCY GRAPH                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐                                                    │
+│  │  syn AST        │ ← Already exists (Rust ecosystem)                  │
+│  │  (foundation)   │                                                    │
+│  └────────┬────────┘                                                    │
+│           │                                                              │
+│           ▼                                                              │
+│  ┌─────────────────┐                                                    │
+│  │  AST Bridge     │ ← Already 95% (Oxur)                               │
+│  │  (S-exp ↔ syn) │                                                    │
+│  └────────┬────────┘                                                    │
+│           │                                                              │
+│           ▼                                                              │
+│  ┌─────────────────────────────────────────────────────┐               │
+│  │              PHASE 1: Core Evaluator                 │               │
+│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐       │               │
+│  │  │   Value   │  │Environment│  │ Evaluator │       │               │
+│  │  │   repr    │→│  bindings │→│  syn::*   │       │               │
+│  │  └───────────┘  └───────────┘  └───────────┘       │               │
+│  └──────────────────────────┬──────────────────────────┘               │
+│                             │                                           │
+│           ┌─────────────────┼─────────────────┐                        │
+│           │                 │                 │                         │
+│           ▼                 ▼                 ▼                         │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                  │
+│  │  PHASE 2:   │   │  PHASE 3:   │   │  PHASE 4:   │                  │
+│  │   Macros    │   │    REPL     │   │  Compiler   │                  │
+│  │  (Oxur-     │   │(Integration)│   │ (Escape     │                  │
+│  │  specific)  │   │             │   │  hatch)     │                  │
+│  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘                  │
+│         │                 │                 │                          │
+│         └─────────────────┴─────────────────┘                          │
+│                           │                                             │
+│                           ▼                                             │
+│                  ┌─────────────────┐                                   │
+│                  │   PHASE 5:      │                                   │
+│                  │   Ownership     │                                   │
+│                  │   (Optional)    │                                   │
+│                  └─────────────────┘                                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.3 Minimum Viable Treebeard (MVT)
@@ -286,7 +283,6 @@ assert_eq!(value, Value::Integer(3));
 ```
 
 **MVT requirements:**
-
 1. Value representation (primitives + functions)
 2. Environment (bindings + scopes)
 3. Evaluate: `syn::ExprLit`, `syn::ExprBinary`, `syn::ExprPath`, `syn::ExprCall`
@@ -294,7 +290,6 @@ assert_eq!(value, Value::Integer(3));
 5. Error handling with source positions
 
 **MVT does NOT need:**
-
 - Ownership tracking (can add later)
 - Closures (named functions sufficient initially)
 - Macros (frontend responsibility)
@@ -326,10 +321,10 @@ assert_eq!(value, Value::Integer(3));
 pub struct Environment {
     /// Variable bindings (flat array for cache-friendly access)
     bindings: Vec<Binding>,
-
+    
     /// Frame boundaries (indices into bindings)
     frames: Vec<usize>,
-
+    
     /// Current module context
     current_module: Option<ModulePath>,
 }
@@ -364,11 +359,11 @@ impl Environment {
         }
         None
     }
-
+    
     pub fn push_frame(&mut self) {
         self.frames.push(self.bindings.len());
     }
-
+    
     pub fn pop_frame(&mut self) {
         if let Some(boundary) = self.frames.pop() {
             self.bindings.truncate(boundary);
@@ -392,7 +387,7 @@ pub enum Value {
     I8(i8), I16(i16), I32(i32), I64(i64), I128(i128), Isize(isize),
     U8(u8), U16(u16), U32(u32), U64(u64), U128(u128), Usize(usize),
     F32(f32), F64(f64),
-
+    
     // Tier 2: Heap-allocated Rust types (Arc-wrapped)
     String(Arc<String>),
     Vec(Arc<Vec<Value>>),
@@ -400,13 +395,13 @@ pub enum Value {
     Tuple(Arc<Vec<Value>>),
     Struct(Arc<StructValue>),
     Enum(Arc<EnumValue>),
-
+    
     // Tier 3: Callable
     Closure(Arc<Closure>),
     Function(Arc<FunctionDef>),
     BuiltinFn(BuiltinFn),
     CompiledFn(CompiledFn),
-
+    
     // References (for ownership tracking)
     Ref(ValueRef),
     RefMut(ValueRefMut),
@@ -425,7 +420,6 @@ pub struct Closure {
 ```
 
 **Size analysis:**
-
 - Enum discriminant: 1 byte
 - Largest inline variant: `I128`/`U128` at 16 bytes
 - Total Value size: ~24 bytes (with padding)
@@ -440,10 +434,10 @@ pub struct Closure {
 pub struct OwnershipTracker {
     /// Next tag to allocate
     next_tag: u32,
-
+    
     /// Per-value ownership state
     states: HashMap<ValueId, OwnershipState>,
-
+    
     /// Active protectors (function arguments)
     protectors: Vec<Protector>,
 }
@@ -473,10 +467,10 @@ impl OwnershipTracker {
     pub fn retag(&mut self, value_id: ValueId, kind: BorrowKind) -> Result<u32, OwnershipError> {
         let tag = self.next_tag;
         self.next_tag += 1;
-
+        
         let state = self.states.get_mut(&value_id)
             .ok_or(OwnershipError::UnknownValue)?;
-
+        
         match (kind, state.permission) {
             // Can create shared ref from unique or shared
             (BorrowKind::Shared, Permission::Unique | Permission::SharedRO) => {
@@ -499,20 +493,20 @@ impl OwnershipTracker {
             }
         }
     }
-
+    
     /// Called when accessing through a reference
     pub fn check_access(&self, value_id: ValueId, tag: u32, write: bool) -> Result<(), OwnershipError> {
         let state = self.states.get(&value_id)
             .ok_or(OwnershipError::UnknownValue)?;
-
+        
         if state.permission == Permission::Disabled {
             return Err(OwnershipError::UseAfterMove { value_id });
         }
-
+        
         if write && state.permission == Permission::SharedRO {
             return Err(OwnershipError::WriteToShared { value_id });
         }
-
+        
         Ok(())
     }
 }
@@ -544,13 +538,13 @@ pub struct OwnershipTracker { /* see Part 3.3 */ }
 pub struct EvalContext {
     /// Ownership checking level
     pub ownership_mode: OwnershipMode,
-
+    
     /// Auto-compile threshold (None = manual only)
     pub compile_threshold: Option<u32>,
-
+    
     /// Interrupt flag for long-running evaluation
     pub interrupt: Arc<AtomicBool>,
-
+    
     /// Call depth limit (stack overflow protection)
     pub max_call_depth: usize,
 }
@@ -603,15 +597,15 @@ pub trait ToValue {
 
 /// Evaluate a sequence of items (top-level forms)
 pub fn eval_items(
-    items: &[syn::Item],
-    env: &mut Environment,
+    items: &[syn::Item], 
+    env: &mut Environment, 
     ctx: &EvalContext
 ) -> Result<Value, EvalError>;
 
 /// Evaluate a single expression
 pub fn eval_expr(
-    expr: &syn::Expr,
-    env: &mut Environment,
+    expr: &syn::Expr, 
+    env: &mut Environment, 
     ctx: &EvalContext
 ) -> Result<Value, EvalError>;
 
@@ -627,30 +621,26 @@ pub fn register_fn<F, Args, Ret>(
 ```
 
 **Responsibilities:**
-
 - Evaluate `syn` AST nodes to values
 - Manage variable/function bindings
 - Track ownership state (optional)
 - Provide hooks for language frontends
 
 **Non-responsibilities:**
-
 - Parsing (frontend responsibility)
 - Macro expansion (frontend responsibility)
 - Compilation (treebeard-loader responsibility)
 - REPL UI (treebeard-repl responsibility)
 
 **Dependencies:**
-
 - `syn` (AST types)
 - `quote` (for compilation path)
 - `proc-macro2` (for span handling)
 
 **Dependents:**
-
 - `treebeard-repl`
 - `treebeard-loader`
-- `oxur-runtime`
+- `oxur-vm`
 
 ### 4.2 treebeard-repl
 
@@ -672,13 +662,13 @@ pub struct Session {
 pub struct ReplState {
     /// Base environment (prelude, never changes)
     pub base: Environment,
-
+    
     /// Saved environment (snapshot before slurp)
     pub save: Option<Environment>,
-
+    
     /// Current working environment
     pub curr: Environment,
-
+    
     /// Whether a file is slurped
     pub slurped: bool,
 }
@@ -687,10 +677,10 @@ pub struct ReplState {
 pub struct History {
     /// Previous forms (+, ++, +++)
     pub forms: VecDeque<String>,
-
+    
     /// Previous values (*, **, ***)
     pub values: VecDeque<Value>,
-
+    
     /// Maximum history size
     pub max_size: usize,
 }
@@ -709,8 +699,8 @@ pub struct SessionManager {
 pub trait LanguageFrontend {
     fn parse(&self, source: &str) -> Result<Vec<syn::Item>, ParseError>;
     fn expand_macros(
-        &self,
-        items: Vec<syn::Item>,
+        &self, 
+        items: Vec<syn::Item>, 
         env: &MacroEnvironment
     ) -> Result<(Vec<syn::Item>, MacroEnvironment), MacroError>;
     fn format_error(&self, error: &EvalError, source: &str) -> String;
@@ -738,7 +728,6 @@ impl<F: LanguageFrontend> Repl<F> {
 ```
 
 **Responsibilities:**
-
 - Session lifecycle management
 - History tracking (+, *, etc.)
 - Slurp/unslurp file loading
@@ -746,18 +735,15 @@ impl<F: LanguageFrontend> Repl<F> {
 - nREPL protocol implementation (optional)
 
 **Non-responsibilities:**
-
 - Parsing (delegated to frontend)
 - Evaluation (delegated to treebeard-core)
 - UI rendering (delegated to client)
 
 **Dependencies:**
-
 - `treebeard-core`
 
 **Dependents:**
-
-- `oxur-runtime` (uses REPL infrastructure)
+- `oxur-vm` (uses REPL infrastructure)
 
 ### 4.3 treebeard-loader
 
@@ -800,10 +786,10 @@ pub struct Compiler {
 impl ModuleRegistry {
     /// Load or reload a module
     pub fn load_module(&self, module: Module);
-
+    
     /// Look up a function by name and arity
     pub fn get_function(&self, module: &str, name: &str, arity: usize) -> Option<FunctionDef>;
-
+    
     /// Reload module from source file
     pub fn reload_from_file(&self, path: &Path) -> Result<String, LoadError>;
 }
@@ -811,7 +797,7 @@ impl ModuleRegistry {
 impl CrateLoader {
     /// Load a crate from crates.io
     pub fn require(&mut self, spec: CrateSpec) -> Result<(), LoadError>;
-
+    
     /// Get function from loaded crate
     pub fn get_function(&self, crate_name: &str, fn_name: &str) -> Option<CompiledFn>;
 }
@@ -819,26 +805,23 @@ impl CrateLoader {
 impl Compiler {
     /// Compile a function to native code
     pub fn compile(&mut self, func: &syn::ItemFn) -> Result<CompiledFn, CompileError>;
-
+    
     /// Check if function should be compiled (hotspot detection)
     pub fn should_compile(&self, fn_id: FnId) -> bool;
 }
 ```
 
 **Responsibilities:**
-
 - Module registry for hot code loading
 - Crate loading from Rust ecosystem
 - Compilation escape hatch (`rustc` invocation)
 - Caching compiled artifacts
 
 **Non-responsibilities:**
-
 - Evaluation (treebeard-core)
 - Source parsing (frontend)
 
 **Dependencies:**
-
 - `treebeard-core`
 - `libloading` (dynamic library loading)
 - `cargo` (for building crates)
@@ -883,13 +866,11 @@ pub struct FunctionEntry {
 ```
 
 **Responsibilities:**
-
 - ABI-stable types for crossing FFI boundary
 - Function table format for compiled libraries
 - Conversion between `Value` and `FfiValue`
 
 **Non-responsibilities:**
-
 - Actual compilation (treebeard-loader)
 - Evaluation (treebeard-core)
 
@@ -929,24 +910,23 @@ pub struct FunctionEntry {
 | **Partial special forms** | 20% (`if`) | Replace with Treebeard |
 
 **Why replace rather than extend:**
-
 - Current evaluation is ad-hoc, not based on `syn` traversal
 - Treebeard provides proper environment handling
 - Ownership tracking requires fresh implementation
 
-### 5.3 New Code Needed in oxur-runtime
+### 5.3 New Code Needed in oxur-vm
 
 ```rust
-// oxur-runtime/src/lib.rs
+// oxur-vm/src/lib.rs
 
 /// Oxur language frontend for Treebeard
 pub struct OxurFrontend {
     /// S-expression parser
     reader: OxurReader,
-
+    
     /// Macro expander (THE NEW CODE)
     macro_expander: MacroExpander,
-
+    
     /// S-exp to syn AST bridge (existing)
     ast_bridge: AstBridge,
 }
@@ -955,13 +935,13 @@ impl LanguageFrontend for OxurFrontend {
     fn parse(&self, source: &str) -> Result<Vec<syn::Item>, ParseError> {
         // 1. Parse S-expressions (existing code)
         let sexps = self.reader.read(source)?;
-
+        
         // 2. Convert to syn AST (existing 95% bridge)
         let items = self.ast_bridge.sexps_to_items(&sexps)?;
-
+        
         Ok(items)
     }
-
+    
     fn expand_macros(
         &self,
         items: Vec<syn::Item>,
@@ -970,21 +950,21 @@ impl LanguageFrontend for OxurFrontend {
         // NEW CODE: Macro expansion
         self.macro_expander.expand_all(items, env)
     }
-
+    
     fn format_error(&self, error: &EvalError, source: &str) -> String {
         // Map syn spans back to S-expression positions
         // Use existing source mapping infrastructure
         self.ast_bridge.format_error(error, source)
     }
-
+    
     fn format_value(&self, value: &Value, depth: usize) -> String {
         // S-expression pretty printer for values
         self.ast_bridge.value_to_sexp(value).pretty_print(depth)
     }
-
+    
     fn name(&self) -> &str { "Oxur" }
     fn file_extension(&self) -> &str { "oxur" }
-
+    
     fn repl_commands(&self) -> Vec<ReplCommand> {
         vec![
             ReplCommand::new("defmacro", "Define a macro", self.handle_defmacro),
@@ -1037,7 +1017,7 @@ impl OxurEvaluator {
     fn eval(&self, sexp: &SExp) -> Result<Value, Error> {
         // Convert to syn first
         let expr = self.bridge.sexp_to_expr(sexp)?;
-
+        
         // Try Treebeard
         match treebeard::eval_expr(&expr, &mut self.env, &self.ctx) {
             Ok(value) => Ok(value),
@@ -1064,7 +1044,7 @@ Remove old evaluator, Treebeard handles everything.
 pub struct MacroExpander {
     /// Core forms that are never expanded
     core_forms: HashSet<Symbol>,
-
+    
     /// Predefined macros (built-in)
     predefined: HashMap<Symbol, PredefinedMacro>,
 }
@@ -1073,7 +1053,7 @@ pub struct MacroExpander {
 pub struct MacroEnvironment {
     /// User-defined macros
     user_macros: HashMap<Symbol, UserMacro>,
-
+    
     /// Variable counter for gensym
     gensym_counter: u64,
 }
@@ -1094,7 +1074,7 @@ impl MacroExpander {
     ) -> Result<(Vec<syn::Item>, MacroEnvironment), MacroError> {
         let mut new_env = env.clone();
         let mut expanded = Vec::new();
-
+        
         for item in items {
             match self.expand_item(&item, &mut new_env)? {
                 ExpandResult::Item(i) => expanded.push(i),
@@ -1102,10 +1082,10 @@ impl MacroExpander {
                 ExpandResult::Multiple(items) => expanded.extend(items),
             }
         }
-
+        
         Ok((expanded, new_env))
     }
-
+    
     /// Expand a single form (from LFE's exp_macro pattern)
     fn expand_form(
         &self,
@@ -1120,22 +1100,22 @@ impl MacroExpander {
                 }
             }
         }
-
+        
         // 2. Check user-defined macros
         if let Some(macro_def) = self.lookup_user_macro(form, env) {
             let expanded = self.apply_macro(macro_def, form, env)?;
             return Ok(Some(expanded));
         }
-
+        
         // 3. Check predefined macros
         if let Some(expanded) = self.expand_predefined(form)? {
             return Ok(Some(expanded));
         }
-
+        
         // 4. Not a macro
         Ok(None)
     }
-
+    
     /// Recursive expansion until fixed point
     fn expand_recursive(
         &self,
@@ -1202,10 +1182,10 @@ impl MacroExpander {
 pub struct OwnershipTracker {
     /// Next tag to allocate
     next_tag: u32,
-
+    
     /// Per-value ownership state (keyed by ValueId)
     states: HashMap<ValueId, OwnershipState>,
-
+    
     /// Stack of active protectors
     protector_stack: Vec<ProtectorFrame>,
 }
@@ -1215,10 +1195,10 @@ pub struct OwnershipTracker {
 pub struct OwnershipState {
     /// Unique tag for this borrow (4 bytes)
     pub tag: u32,
-
+    
     /// Current permission level (1 byte)
     pub permission: Permission,
-
+    
     /// Is this value protected by a function call? (1 byte)
     pub protected: bool,
 }
@@ -1229,13 +1209,13 @@ pub struct OwnershipState {
 pub enum Permission {
     /// Owned or unique mutable borrow
     Unique,
-
+    
     /// Mutable reborrow (can read and write)
     SharedRW,
-
+    
     /// Shared reference (read only)
     SharedRO,
-
+    
     /// Moved or dropped (cannot access)
     Disabled,
 }
@@ -1244,7 +1224,7 @@ pub enum Permission {
 pub struct ProtectorFrame {
     /// Scope this protector was created in
     scope_id: ScopeId,
-
+    
     /// Protected values
     protected: Vec<(ValueId, u32)>,  // (value_id, tag)
 }
@@ -1291,7 +1271,6 @@ pub struct ValueId(u64);
 **Goal:** Evaluate basic `syn::Expr` and `syn::Stmt` without ownership tracking.
 
 **Deliverables:**
-
 - [ ] `Value` enum (all primitive types)
 - [ ] `Environment` struct (flat scope with frames)
 - [ ] `Evaluate` impl for `syn::ExprLit` (literals)
@@ -1310,7 +1289,6 @@ pub struct ValueId(u64);
 **Dependencies:** `syn`, `proc-macro2`
 
 **Success criteria:**
-
 ```rust
 // Can evaluate this:
 let items: Vec<syn::Item> = syn::parse_str(r#"
@@ -1333,7 +1311,6 @@ let result = eval_items(&items, &mut env, &ctx)?;
 **Goal:** Prove split architecture works with Oxur.
 
 **Deliverables:**
-
 - [ ] `LanguageFrontend` trait definition
 - [ ] `RustFrontend` (trivial impl for testing)
 - [ ] `OxurFrontend` struct (uses existing AST bridge)
@@ -1345,7 +1322,6 @@ let result = eval_items(&items, &mut env, &ctx)?;
 **Dependencies:** Phase 1, Oxur AST Bridge
 
 **Success criteria:**
-
 ```rust
 // Same program, two syntaxes, same result:
 let rust_result = rust_frontend.eval("fn add(a: i32, b: i32) -> i32 { a + b }")?;
@@ -1360,12 +1336,11 @@ assert_eq!(rust_result, oxur_result);
 **Goal:** Lisp macros work, producing syn AST.
 
 **Deliverables:**
-
 - [ ] `MacroExpander` struct
 - [ ] `MacroEnvironment` (macro definitions)
 - [ ] `defmacro` registration
 - [ ] `gensym` implementation
-- [ ] Quasiquote expansion (`,`, ~, ~@)
+- [ ] Quasiquote expansion (`, `, ~, ~@)
 - [ ] Predefined macros: `defn`, `when`, `unless`, `cond`, `let`
 - [ ] Recursive expansion with fixed-point detection
 - [ ] Macro error reporting with span info
@@ -1375,7 +1350,6 @@ assert_eq!(rust_result, oxur_result);
 **Dependencies:** Phase 2
 
 **Success criteria:**
-
 ```lisp
 ;; Define a macro
 (defmacro when [test & body]
@@ -1397,7 +1371,6 @@ assert_eq!(rust_result, oxur_result);
 **Goal:** Full-featured REPL using existing Oxur infrastructure.
 
 **Deliverables:**
-
 - [ ] `Session` struct (three-environment pattern)
 - [ ] History variables (+, ++, +++, *, **, ***)
 - [ ] `slurp` / `unslurp` commands
@@ -1410,7 +1383,6 @@ assert_eq!(rust_result, oxur_result);
 **Dependencies:** Phase 3, Oxur REPL infrastructure (60%)
 
 **Success criteria:**
-
 ```
 oxur> (defn add [a b] (+ a b))
 #'add
@@ -1431,7 +1403,6 @@ oxur> (unslurp)
 **Goal:** Closures work; optional ownership checking.
 
 **Deliverables:**
-
 - [ ] `Closure` struct with upvalues
 - [ ] Capture analysis (detect captured variables)
 - [ ] `Evaluate` impl for `syn::ExprClosure`
@@ -1446,7 +1417,6 @@ oxur> (unslurp)
 **Dependencies:** Phase 4
 
 **Success criteria:**
-
 ```rust
 // Closures capture correctly:
 let x = 5;
@@ -1466,7 +1436,6 @@ let z = x;  // ERROR: use after move
 **Goal:** Hot functions can be compiled to native code.
 
 **Deliverables:**
-
 - [ ] `Compiler` struct
 - [ ] Rust codegen (syn AST → Rust source via `quote!`)
 - [ ] rustc invocation with cdylib output
@@ -1480,7 +1449,6 @@ let z = x;  // ERROR: use after move
 **Dependencies:** Phase 5
 
 **Success criteria:**
-
 ```
 oxur> (defn fib [n] ...)
 oxur> (time (fib 35))
@@ -1498,7 +1466,6 @@ Elapsed: 15ms  ;; 100x speedup
 **Goal:** Use Rust ecosystem crates from REPL.
 
 **Deliverables:**
-
 - [ ] `CrateLoader` struct
 - [ ] Wrapper generation for crate functions
 - [ ] Cargo invocation for building
@@ -1511,7 +1478,6 @@ Elapsed: 15ms  ;; 100x speedup
 **Dependencies:** Phase 6
 
 **Success criteria:**
-
 ```
 oxur> (require "regex")
 ✓ Loaded crate: regex
@@ -1602,23 +1568,19 @@ true
 ### Appendix A: `syn` Type Coverage Plan
 
 **High Priority (MVP):**
-
 - `syn::Expr`: Lit, Binary, Unary, Path, Call, MethodCall, Block, If, Match, Closure, Return, Break, Continue
 - `syn::Stmt`: Local, Expr, Semi
 - `syn::Item`: Fn, Const, Static, Struct, Enum, Impl
 
 **Medium Priority (Phase 5-6):**
-
 - `syn::Expr`: Assign, AssignOp, Index, Field, Range, Reference, Try, Await
 - `syn::Item`: Trait, Type, Mod, Use
 
 **Low Priority (Phase 7+):**
-
 - `syn::Expr`: Array, Tuple, Repeat, Cast, Let, While, Loop, ForLoop, Unsafe, Yield
 - `syn::Item`: ExternCrate, Macro, Union, TraitAlias
 
 **Probably Never:**
-
 - `syn::Expr`: Verbatim, Infer, TryBlock (unstable)
 - `syn::Item`: ForeignMod (FFI—use crate loader instead)
 
@@ -1689,14 +1651,12 @@ This guide provides a concrete, actionable path from Oxur's current state to a p
 5. **LFE's macro pattern:** Expand before evaluation, separate compile-time and runtime environments
 
 The architecture is designed to:
-
 - Build on Oxur's existing 95% AST Bridge
 - Leverage the 60% REPL infrastructure
 - Fill the 0% macro system gap
 - Replace the 25% evaluation with proper `syn` traversal
 
 **Total estimated codebase:**
-
 - Treebeard: ~10,000 lines
 - Oxur additions: ~2,500 lines
 - Combined: ~12,500 lines (under 15K target)
