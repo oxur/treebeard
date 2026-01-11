@@ -24,11 +24,11 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
-pub mod evaluator;
-pub mod value;
 pub mod environment;
-pub mod ownership;
 pub mod error;
+pub mod evaluator;
+pub mod ownership;
+pub mod value;
 
 /// Treebeard version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
