@@ -33,3 +33,6 @@ assets/ai/ai-rust
 *.afphoto
 assets/images/logo/*idea*
 assets/images/logo/*texture*
+
+# AI
+.claude/
