@@ -6,6 +6,9 @@ target/
 # Built binaries
 bin/
 
+# Working notes and scratch files
+workbench/
+
 # IDE
 .idea/
 .vscode/
