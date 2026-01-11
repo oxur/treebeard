@@ -2,13 +2,26 @@
 
 use thiserror::Error;
 
-/// Evaluation error
-#[derive(Debug, Error)]
-pub enum EvalError {
-    /// Placeholder error variant
-    #[error("evaluation error: {0}")]
-    Generic(String),
+/// Main error type for Treebeard operations
+#[derive(Error, Debug)]
+pub enum TreebeardError {
+    /// Type mismatch error
+    #[error("Type error: expected {expected}, got {got}")]
+    TypeError {
+        /// Expected type
+        expected: String,
+        /// Actual type received
+        got: String,
+    },
+
+    /// Value error
+    #[error("Value error: {0}")]
+    ValueError(String),
+
+    /// Feature not yet implemented
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
-/// Result type for evaluation
-pub type Result<T> = std::result::Result<T, EvalError>;
+/// Result type alias for Treebeard operations
+pub type Result<T> = std::result::Result<T, TreebeardError>;

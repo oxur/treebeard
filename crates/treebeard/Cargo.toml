@@ -17,5 +17,7 @@ proc-macro2 = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 dashmap = { workspace = true }
+indexmap = "2"
 
 [dev-dependencies]
+pretty_assertions = "1"

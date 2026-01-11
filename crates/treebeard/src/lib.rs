@@ -18,8 +18,7 @@
 //!
 //! 🚧 **Work in Progress** - Core architecture defined, implementation underway.
 //!
-//! See the [Treebeard Architecture Guide](../../crates/design/docs/architecture.md)
-//! for detailed design documentation.
+//! See the design documentation for detailed architecture information.
 
 #![warn(missing_docs)]
 #![warn(clippy::all)]
@@ -30,13 +29,22 @@ pub mod evaluator;
 pub mod ownership;
 pub mod value;
 
+// Re-export main types
+pub use error::{Result, TreebeardError};
+pub use value::{
+    BuiltinFn, BuiltinFnPtr, ClosureValue, CompiledFn, EnumData, EnumValue, FunctionValue,
+    HashableValue, StructValue, Value, ValueRef, ValueRefMut,
+};
+
 /// Treebeard version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn test_version_exists() {
+        assert!(!VERSION.is_empty());
     }
 }
