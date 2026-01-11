@@ -23,6 +23,7 @@ workbench/
 
 # Documentation
 book/
+assets/ai/ai-rust
 
 # Test artifacts
 *.profraw

@@ -27,9 +27,10 @@ This document provides essential guidance for AI assistants (like Claude Code) w
 
 1. **`assets/ai/ai-rust/skills/claude/SKILL.md`** - Advanced Rust programming skill (**use this**)
 2. **`assets/ai/ai-rust/guides/*.md`** - Comprehensive Rust guidelines referenced by the skill
-3. **This file (CLAUDE.md)** - Oxur-specific conventions only
+3. **`assets/ai/ai-rust/README.md`** - How to use `ai-rust`
+4. **`assets/ai/ai-rust/guides/README.md`** - How to use the guides in `ai-rust`
 
-Note: `assets/ai/ai-rust` is a symlink; you will need to look in `assets/ai/ai-rust/`
+Note: `assets/ai/ai-rust` is a symlink; you will need to look in `assets/ai/ai-rust/` (note the final slash). Depending upon the computer you are running on, the actual dir may be at `~/lab/oxur/ai-rust`, `~/lab/oxur/ai-rust-skill`, etc.
 
 **For Treebeard-Specific Topics:**
 
@@ -78,47 +79,28 @@ Rust Source → [Rust Frontend] → syn AST → [Treebeard] → Value
 
 ### Core Components
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Treebeard                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  treebeard-core/                                                │
-│  ├── value.rs         # Value enum (runtime representation)     │
-│  ├── environment.rs   # Variable/function bindings              │
-│  ├── eval/            # Expression and statement evaluation     │
-│  │   ├── expr.rs      # syn::Expr → Value                       │
-│  │   ├── stmt.rs      # syn::Stmt handling                      │
-│  │   └── item.rs      # syn::Item (fn, struct, etc.)            │
-│  ├── error.rs         # Error types with span tracking          │
-│  └── builtins.rs      # Built-in functions                      │
-│                                                                 │
-│  treebeard-frontend/                                            │
-│  ├── trait.rs         # LanguageFrontend trait                  │
-│  ├── rust.rs          # Rust syntax frontend                    │
-│  └── oxur.rs          # Oxur S-expression frontend              │
-│                                                                 │
-│  treebeard-repl/                                                │
-│  ├── session.rs       # REPL session management                 │
-│  ├── commands.rs      # REPL commands (:help, :type, etc.)      │
-│  └── completion.rs    # Tab completion                          │
-│                                                                 │
-│  treebeard-loader/                                              │
-│  ├── compiler.rs      # syn AST → rustc compilation             │
-│  └── loader.rs        # Dynamic loading of compiled code        │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+Treebeard's architecture follows a phased implementation approach. The core interpreter is structured around these key components:
+
+- **Value System** — Runtime value representation supporting all Rust types
+- **Environment** — Variable and function bindings with scoped frame management
+- **Evaluator** — Tree-walking interpreter for `syn` AST nodes
+- **Error Handling** — Span-aware error reporting for helpful diagnostics
+- **Ownership Tracking** — Runtime checks for move/borrow violations
+- **Frontend Trait** — Language-agnostic abstraction for multiple syntax frontends
+- **REPL** — Interactive development environment
+- **Compilation Escape Hatch** — Dynamic compilation to native code for hot paths
+
+The exact file structure will evolve during implementation. See the Project Plan and Implementation Stages documents for the phased development approach.
 
 ### Key Types
 
-| Type | Purpose | Location |
-|------|---------|----------|
-| `Value` | Runtime value representation | `treebeard-core/src/value.rs` |
-| `Environment` | Scoped variable bindings | `treebeard-core/src/environment.rs` |
-| `EvalContext` | Evaluation configuration | `treebeard-core/src/context.rs` |
-| `EvalError` | Error with source span | `treebeard-core/src/error.rs` |
-| `LanguageFrontend` | Frontend abstraction | `treebeard-frontend/src/trait.rs` |
+| Type | Purpose |
+|------|---------|
+| `Value` | Runtime value representation |
+| `Environment` | Scoped variable bindings |
+| `EvalContext` | Evaluation configuration |
+| `EvalError` | Error with source span |
+| `LanguageFrontend` | Frontend abstraction |
 
 ### Evaluation Flow
 
@@ -137,46 +119,24 @@ let result = treebeard::eval_items(&expanded, &mut env, &ctx)?;
 
 ## Workspace Structure
 
+The project is organized as a Cargo workspace:
+
 ```
 treebeard/
-├── Cargo.toml              # Workspace configuration
-├── CLAUDE.md               # This file
-├── README.md               # Project overview
-├── Makefile                # Development targets
-│
-treebeard/
+├── Cargo.toml           # Workspace configuration
+├── CLAUDE.md            # This file
+├── README.md            # Project overview
+├── Makefile             # Development targets
 ├── crates/
-│   ├── treebeard/              # Core interpreter
-│   │   ├── src/
-│   │   │   ├── evaluator.rs    # syn AST interpreter
-│   │   │   ├── value.rs        # Runtime value types
-│   │   │   ├── environment.rs  # Variable bindings
-│   │   │   ├── ownership.rs    # Runtime ownership tracking
-│   │   │   └── error.rs        # Error types
-│   │   └── Cargo.toml
-│   │
-│   └── design/                 # Design documentation
-│       ├── docs/<managed dirs for doc status>
-│       │   ├── 0002-treebeard-fangorn-a-vision-document.md
-│       │   └── 0001-treebeard-implementation-guide-v3.md
-│       └── Cargo.toml
-││
-└── tests/
-    ├── integration/        # Cross-crate integration tests
-    └── fixtures/           # Test data files
+│   ├── treebeard/       # Core interpreter (implementation in progress)
+│   └── design/          # Design documentation (ODDs managed by oxur-odm)
+├── assets/
+│   ├── ai/              # AI assistant guides and resources
+│   └── images/          # Project assets
+└── tests/               # Integration tests (to be added)
 ```
 
-### Crate Dependencies
-
-```
-treebeard-core          (no internal deps)
-       ↑
-treebeard-frontend      (depends on core)
-       ↑
-treebeard-repl          (depends on frontend, core)
-       ↑
-treebeard-loader        (depends on core)
-```
+The crate structure will evolve during implementation following the phased approach outlined in the Project Plan. The `design/` crate uses `oxur-odm` (Oxur Design Document Manager) to organize design documents by status (draft, active, superseded, etc.).
 
 ---
 
@@ -206,17 +166,17 @@ make check        # build + lint + test
 
 ### Key Dependencies
 
-```toml
-[dependencies]
-syn = { version = "2", features = ["full", "parsing", "printing", "extra-traits"] }
-proc-macro2 = "1"
-quote = "1"
-thiserror = "1"
-indexmap = "2"
+Core dependencies are managed at the workspace level. Key dependencies include:
 
-[dev-dependencies]
-pretty_assertions = "1"
-```
+- **syn 2.0** — AST types with full features
+- **quote, proc-macro2** — AST construction and manipulation
+- **thiserror, anyhow** — Error handling
+- **dashmap** — Concurrent data structures
+- **tokio** — Async runtime (for REPL)
+- **rustyline** — REPL line editing
+- **oxur-odm** — Design document management
+
+See `Cargo.toml` in the workspace root for the complete dependency list.
 
 ---
 
@@ -330,11 +290,12 @@ pub fn eval_binary(expr: &syn::ExprBinary, env: &mut Environment) -> Result<Valu
 
 ### Coverage Target
 
-**Minimum: 90% line coverage** for `treebeard-core`
+**Target: 95% line coverage** for the core interpreter crate
+
+See `assets/ai/CLAUDE-CODE-COVERAGE.md` for comprehensive testing guidelines.
 
 ```bash
-cargo llvm-cov --html
-open target/llvm-cov/html/index.html
+make coverage  # Generates ASCII table coverage report
 ```
 
 ### Test Naming Convention
@@ -404,7 +365,7 @@ For each `syn` expression type implemented:
 ### Implementing a New `syn` Expression Type
 
 1. **Check the `syn` docs** for the type's structure
-2. **Add evaluation** in `treebeard-core/src/eval/expr.rs`
+2. **Add evaluation logic** in the evaluator
 3. **Add tests** for all paths
 4. **Update coverage** check
 5. **Document** any limitations
@@ -425,7 +386,7 @@ impl Evaluate for syn::ExprRange {
 
 ### Adding a Built-in Function
 
-1. **Define the function** in `builtins.rs`:
+1. **Define the function** following the built-in function signature pattern:
 
 ```rust
 fn builtin_println(args: &[Value]) -> Result<Value, String> {
@@ -463,11 +424,15 @@ let ctx = EvalContext {
 
 ### Project Documentation
 
+All design documents are managed using `oxur-odm` and organized by status in `crates/design/docs/`:
+
 | Document | Purpose |
 |----------|---------|
-| `docs/planning/treebeard-project-plan.md` | High-level phases and timeline |
-| `docs/planning/treebeard-implementation-stages.md` | Detailed stage breakdown |
-| `docs/design/0001-implementation-guide.md` | Architecture and design decisions |
+| `crates/design/docs/05-active/0004-treebeard-project-plan.md` | High-level phases and timeline (19 weeks) |
+| `crates/design/docs/05-active/0005-treebeard-implementation-stages.md` | Detailed stage-by-stage breakdown |
+| `crates/design/docs/01-draft/0001-treebeard-implementation-guide-v3.md` | Architecture and design decisions |
+| `crates/design/docs/01-draft/0002-treebeard-fangorn-a-vision-document.md` | Future vision: Fangorn runtime |
+| `assets/ai/CLAUDE-CODE-COVERAGE.md` | Comprehensive test coverage guide |
 
 ### Key References
 
@@ -491,18 +456,20 @@ See the Oxur repository for frontend-specific conventions.
 
 ### Before Starting Work
 
-- [ ] Read relevant stage document (e.g., `stage-1.1-value-representation.md`)
+- [ ] Read relevant implementation stage document from `crates/design/docs/05-active/0005-treebeard-implementation-stages.md`
+- [ ] Review the phase goals in the Project Plan
 - [ ] Understand which `syn` types are involved
 - [ ] Check existing patterns in the codebase
 - [ ] Know the success criteria
+- [ ] Review `assets/ai/ai-rust/skills/claude/SKILL.md` and `assets/ai/ai-rust/guides/README.md` for which Rust best practices to apply for the planned work
 
 ### Before Submitting Changes
 
-- [ ] All tests pass (`cargo test --all`)
-- [ ] Coverage ≥ 90% for changed code
+- [ ] All tests pass (`make test`)
+- [ ] Coverage ≥ 95% for changed code (`make coverage`)
 - [ ] Linting passes (`make lint`)
 - [ ] Code formatted (`make format`)
-- [ ] No compiler warnings
+- [ ] No compiler warnings or warnings of any type
 - [ ] Public items have doc comments
 - [ ] Error types include spans
 
@@ -527,7 +494,7 @@ Key things to remember:
 1. **`Value`** is the universal runtime type — everything evaluates to a `Value`
 2. **`Environment`** manages bindings — flat scope with frame boundaries
 3. **`EvalError`** must include spans — users need to know *where* errors occur
-4. **Test thoroughly** — 90%+ coverage, all paths tested
+4. **Test thoroughly** — 95%+ coverage, all paths tested
 5. **Implement incrementally** — Not all `syn` types needed at once
 
 **Document End**
