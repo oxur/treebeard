@@ -1,0 +1,4 @@
+# ODM Configuration for Treebeard
+# Specifies the preferred docs directory path (relative to repo root)
+
+docs_dir = "crates/design/docs"
