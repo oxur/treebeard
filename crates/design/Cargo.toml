@@ -12,3 +12,6 @@ categories = ["development-tools"]
 
 [dependencies]
 # No dependencies - this is a documentation-only crate
+
+[dev-dependencies]
+oxur-odm = { workspace = true }

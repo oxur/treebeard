@@ -19,7 +19,12 @@ BUILD_TIME := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 RUST_VERSION := $(shell rustc --version 2>/dev/null || echo "unknown")
 
 # List of binaries to build and install
-BINARIES := tbd
+BINARIES := tbd odm
+
+# External tools configuration
+OXUR_WORKSPACE := ../oxur
+ODM_PATH := $(OXUR_WORKSPACE)/crates/oxur-odm
+ODM_TARGET := $(OXUR_WORKSPACE)/target/$(MODE)
 
 # Default target
 .DEFAULT_GOAL := help
@@ -127,9 +132,22 @@ build: clean $(BIN_DIR)
 	else \
 		cargo build; \
 	fi
+	@echo "$(CYAN)• Building external tools (odm)...$(RESET)"
+	@if [ "$(MODE)" = "release" ]; then \
+		cargo build --release --manifest-path $(ODM_PATH)/Cargo.toml; \
+	else \
+		cargo build --manifest-path $(ODM_PATH)/Cargo.toml; \
+	fi
 	@echo "$(CYAN)• Copying binaries to $(BIN_DIR)/$(RESET)"
 	@for bin in $(BINARIES); do \
-		if [ -f $(TARGET)/$$bin ]; then \
+		if [ "$$bin" = "odm" ]; then \
+			if [ -f $(ODM_TARGET)/$$bin ]; then \
+				cp $(ODM_TARGET)/$$bin $(BIN_DIR)/$$bin; \
+				echo "  $(GREEN)✓$(RESET) $$bin (from oxur workspace)"; \
+			else \
+				echo "  $(YELLOW)⚠$(RESET) $$bin not found in $(ODM_TARGET), skipping"; \
+			fi; \
+		elif [ -f $(TARGET)/$$bin ]; then \
 			cp $(TARGET)/$$bin $(BIN_DIR)/$$bin; \
 			echo "  $(GREEN)✓$(RESET) $$bin"; \
 		else \
@@ -142,13 +160,23 @@ build: clean $(BIN_DIR)
 .PHONY: build-release
 build-release: MODE = release
 build-release: TARGET = ./target/$(MODE)
+build-release: ODM_TARGET = $(OXUR_WORKSPACE)/target/$(MODE)
 build-release: clean $(BIN_DIR)
 	@echo "$(BLUE)Building $(PROJECT_NAME) in release mode...$(RESET)"
 	@echo "$(CYAN)• Compiling optimized workspace...$(RESET)"
 	@cargo build --release
+	@echo "$(CYAN)• Building external tools (odm)...$(RESET)"
+	@cargo build --release --manifest-path $(ODM_PATH)/Cargo.toml
 	@echo "$(CYAN)• Copying binaries to $(BIN_DIR)/$(RESET)"
 	@for bin in $(BINARIES); do \
-		if [ -f $(TARGET)/$$bin ]; then \
+		if [ "$$bin" = "odm" ]; then \
+			if [ -f $(ODM_TARGET)/$$bin ]; then \
+				cp $(ODM_TARGET)/$$bin $(BIN_DIR)/$$bin; \
+				echo "  $(GREEN)✓$(RESET) $$bin (from oxur workspace, size: $$(du -h $(BIN_DIR)/$$bin | cut -f1))"; \
+			else \
+				echo "  $(YELLOW)⚠$(RESET) $$bin not found in $(ODM_TARGET), skipping"; \
+			fi; \
+		elif [ -f $(TARGET)/$$bin ]; then \
 			cp $(TARGET)/$$bin $(BIN_DIR)/$$bin; \
 			echo "  $(GREEN)✓$(RESET) $$bin (size: $$(du -h $(BIN_DIR)/$$bin | cut -f1))"; \
 		else \

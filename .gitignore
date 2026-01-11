@@ -3,6 +3,9 @@ target/
 **/*.rs.bk
 *.pdb
 
+# Built binaries
+bin/
+
 # IDE
 .idea/
 .vscode/
