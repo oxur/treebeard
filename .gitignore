@@ -21,3 +21,8 @@ book/
 # Test artifacts
 *.profraw
 *.profdata
+
+# Images
+*.afphoto
+assets/images/logo/*idea*
+assets/images/logo/*texture*

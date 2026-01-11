@@ -1,11 +1,16 @@
-# 🌳 Treebeard
+# Treebeard
 
-**A Tree-Walking Interpreter for Rust's `syn` AST**
+[![][build-badge]][build]
+[![][crate-badge]][crate]
+[![][tag-badge]][tag]
+[![][docs-badge]][docs]
+
+[![][logo]][logo-large]
+
+*A Tree-Walking Interpreter for Rust's `syn` AST*
 
 > "I am not altogether on anybody's side, because nobody is altogether on my side."
 > — Treebeard, speaking on language-agnostic design
-
----
 
 ## What is Treebeard?
 
@@ -204,6 +209,7 @@ treebeard/
 [LFE](https://lfe.io) (Lisp Flavoured Erlang) succeeds by doing ONE thing well: syntax transformation. It compiles directly to Erlang AST and delegates everything else to BEAM.
 
 Treebeard follows the same pattern:
+
 - **One job**: Interpret `syn` AST
 - **Delegate**: Type checking and optimization to `rustc`
 - **Result**: Small codebase (<15K LOC) with full Rust interoperability
@@ -211,12 +217,14 @@ Treebeard follows the same pattern:
 ### Why This Matters
 
 Complex VMs try to do everything:
+
 - Custom type systems
 - Custom optimization passes
 - Custom memory management
 - Years of development
 
 Treebeard leverages Rust's existing infrastructure:
+
 - ✅ Type system via `rustc`
 - ✅ Optimization via LLVM
 - ✅ Safety via borrow checker
@@ -229,7 +237,7 @@ Treebeard was designed for [Oxur](https://github.com/oxur/oxur), a Lisp that tre
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Oxur (oxur-vm)                                          │
-│   oxur-reader → oxur-macros → oxur-ast-bridge          │
+│   oxur-reader → oxur-macros → oxur-ast-bridge           │
 │                                      ↓                  │
 │                           Implements LanguageFrontend   │
 └─────────────────────────────┬───────────────────────────┘
@@ -248,6 +256,7 @@ Oxur's existing AST bridge (95% complete) provides the `LanguageFrontend` implem
 **Status**: Early development - architecture is solid, implementation needs contributors!
 
 Areas where help is needed:
+
 - Core evaluator implementation
 - `syn` AST node coverage
 - REPL features
@@ -268,7 +277,9 @@ See `crates/design/docs/research.md` for detailed analysis.
 
 ## License
 
-Apache-2.0
+Copyright © 2026, Oxur Group
+
+Apache License, Version 2.0
 
 ---
 
@@ -276,10 +287,23 @@ Apache-2.0
 
 **Built with 🦀 Rust**
 
-*For languages that grow like trees, not rust like iron*
+*For languages that grow like trees*
 
 [Documentation](https://github.com/oxur/treebeard/tree/main/crates/design/docs) •
 [Architecture](https://github.com/oxur/treebeard/blob/main/crates/design/docs/architecture.md) •
 [Oxur Project](https://github.com/oxur/oxur)
 
 </div>
+
+[//]: ---Named-Links---
+
+[logo]: assets/images/logo/v1-x250.png
+[logo-large]: assets/images/logo/v1.png
+[build]: https://github.com/oxur/treebeard/actions/workflows/ci.yml
+[build-badge]: https://github.com/oxur/treebeard/actions/workflows/ci.yml/badge.svg
+[crate]: https://crates.io/crates/treebeard
+[crate-badge]: https://img.shields.io/crates/v/treebeard.svg
+[docs]: https://docs.rs/treebeard/
+[docs-badge]: https://img.shields.io/badge/rust-documentation-blue.svg
+[tag-badge]: https://img.shields.io/github/tag/oxur/treebeard.svg
+[tag]: https://github.com/oxur/treebeard/tags
