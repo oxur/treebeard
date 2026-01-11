@@ -30,7 +30,8 @@ pub mod ownership;
 pub mod value;
 
 // Re-export main types
-pub use error::{Result, TreebeardError};
+pub use environment::{Binding, BindingMode, Environment, ScopeGuard};
+pub use error::{EnvironmentError, Result, TreebeardError};
 pub use value::{
     BuiltinFn, BuiltinFnPtr, ClosureValue, CompiledFn, EnumData, EnumValue, FunctionValue,
     HashableValue, StructValue, Value, ValueRef, ValueRefMut,
