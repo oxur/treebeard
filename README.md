@@ -148,15 +148,15 @@ pub trait LanguageFrontend {
 
 **Total: ~16-20 weeks to production-ready system**
 
-| Phase | Duration | Deliverable | Milestone |
-|-------|----------|-------------|-----------|
-| **Phase 1** | 4 weeks | Core Evaluator MVP | Execute basic Rust expressions |
-| **Phase 2** | 2 weeks | Frontend Trait | Language abstraction working |
-| **Phase 3** | 3 weeks | Oxur Macro System | Full macro expansion |
-| **Phase 4** | 2 weeks | REPL Integration | Interactive Oxur REPL |
-| **Phase 5** | 3 weeks | Closures & Ownership | Full borrow checking |
-| **Phase 6** | 3 weeks | Compilation Escape | Hot path optimization |
-| **Phase 7** | 2 weeks | Crate Loading | External dependencies |
+| Phase | Duration | Deliverable | Milestone | Status |
+|-------|----------|-------------|-----------|--------|
+| **Phase 1** | 4 weeks | Core Evaluator MVP | Execute basic Rust expressions | ✅ |
+| **Phase 2** | 2 weeks | Frontend Trait | Language abstraction working | 🚧 |
+| **Phase 3** | 3 weeks | Oxur Macro System | Full macro expansion | 💤 |
+| **Phase 4** | 2 weeks | REPL Integration | Interactive Oxur REPL | 💤 |
+| **Phase 5** | 3 weeks | Closures & Ownership | Full borrow checking | 💤 |
+| **Phase 6** | 3 weeks | Compilation Escape | Hot path optimization | 💤 |
+| **Phase 7** | 2 weeks | Crate Loading | External dependencies | 💤 |
 
 ### Useful Milestones
 
