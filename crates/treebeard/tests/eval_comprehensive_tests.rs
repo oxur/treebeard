@@ -5,7 +5,17 @@ fn eval(src: &str) -> std::result::Result<Value, EvalError> {
     let expr: syn::Expr = syn::parse_str(src).expect("parse failed");
     let mut env = Environment::new();
     let ctx = EvalContext::default();
-    expr.eval(&mut env, &ctx)
+    let result = expr.eval(&mut env, &ctx);
+
+    // Convert stray ControlFlow errors to appropriate errors
+    match result {
+        Err(EvalError::ControlFlow(cf)) => match cf {
+            ControlFlow::Break { .. } => Err(EvalError::BreakOutsideLoop { span: None }),
+            ControlFlow::Continue { .. } => Err(EvalError::ContinueOutsideLoop { span: None }),
+            ControlFlow::Return { .. } => Err(EvalError::ReturnOutsideFunction { span: None }),
+        },
+        other => other,
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -321,16 +331,18 @@ fn test_unsupported_await() {
     assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
 }
 
+// Blocks are now supported in Stage 1.4
 #[test]
-fn test_unsupported_block() {
+fn test_block_expression() {
     let result = eval("{ 42 }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Ok(Value::I64(42))));
 }
 
+// break is now supported but must be inside a loop
 #[test]
-fn test_unsupported_break() {
+fn test_break_outside_loop() {
     let result = eval("break");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Err(EvalError::BreakOutsideLoop { .. })));
 }
 
 #[test]
@@ -351,10 +363,11 @@ fn test_unsupported_const_block() {
     assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
 }
 
+// continue is now supported but must be inside a loop
 #[test]
-fn test_unsupported_continue() {
+fn test_continue_outside_loop() {
     let result = eval("continue");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Err(EvalError::ContinueOutsideLoop { .. })));
 }
 
 #[test]
@@ -441,10 +454,11 @@ fn test_unsupported_unsafe() {
     assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
 }
 
+// while loops are now supported in Stage 1.4
 #[test]
-fn test_unsupported_while_loop() {
-    let result = eval("while true { }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+fn test_while_loop_basic() {
+    let result = eval("while false { 42 }");
+    assert!(matches!(result, Ok(Value::Unit)));
 }
 
 #[test]

@@ -1,8 +1,13 @@
 //! Expression evaluation
 
 pub mod binary;
+pub mod control;
+pub mod if_expr;
 pub mod literal;
+pub mod loops;
+pub mod match_expr;
 pub mod path;
+pub mod pattern;
 pub mod unary;
 
 use crate::{Environment, EvalContext, EvalError, Value};
@@ -34,14 +39,14 @@ impl Evaluate for syn::Expr {
             syn::Expr::Unary(expr) => expr.eval(env, ctx),
             syn::Expr::Binary(expr) => expr.eval(env, ctx),
 
-            // Stage 1.4: Control flow (not yet implemented)
-            syn::Expr::If(_) => Err(not_yet_implemented("if expression", self)),
-            syn::Expr::Match(_) => Err(not_yet_implemented("match expression", self)),
-            syn::Expr::Loop(_) => Err(not_yet_implemented("loop expression", self)),
-            syn::Expr::While(_) => Err(not_yet_implemented("while expression", self)),
-            syn::Expr::ForLoop(_) => Err(not_yet_implemented("for loop", self)),
-            syn::Expr::Break(_) => Err(not_yet_implemented("break", self)),
-            syn::Expr::Continue(_) => Err(not_yet_implemented("continue", self)),
+            // Stage 1.4: Control flow
+            syn::Expr::If(expr) => expr.eval(env, ctx),
+            syn::Expr::Match(expr) => expr.eval(env, ctx),
+            syn::Expr::Loop(expr) => expr.eval(env, ctx),
+            syn::Expr::While(expr) => expr.eval(env, ctx),
+            syn::Expr::ForLoop(expr) => expr.eval(env, ctx),
+            syn::Expr::Break(expr) => expr.eval(env, ctx),
+            syn::Expr::Continue(expr) => expr.eval(env, ctx),
 
             // Stage 1.5: Functions (not yet implemented)
             syn::Expr::Call(_) => Err(not_yet_implemented("function call", self)),
@@ -49,8 +54,8 @@ impl Evaluate for syn::Expr {
             syn::Expr::Closure(_) => Err(not_yet_implemented("closure", self)),
             syn::Expr::Return(_) => Err(not_yet_implemented("return", self)),
 
-            // Stage 1.6: Blocks (not yet implemented)
-            syn::Expr::Block(_) => Err(not_yet_implemented("block", self)),
+            // Stage 1.6: Blocks
+            syn::Expr::Block(expr) => if_expr::eval_block(&expr.block, env, ctx),
 
             // Parenthesized expressions - just unwrap
             syn::Expr::Paren(expr) => expr.expr.eval(env, ctx),
@@ -143,3 +148,8 @@ pub fn eval_expr(
 ) -> Result<Value, EvalError> {
     expr.eval(env, ctx)
 }
+
+// Re-export for use by other modules
+pub use control::ControlFlow;
+pub use if_expr::eval_block;
+pub use pattern::{apply_bindings, match_pattern};

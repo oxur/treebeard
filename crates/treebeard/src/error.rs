@@ -151,6 +151,50 @@ pub enum EvalError {
         max: usize,
     },
 
+    /// Control flow (break/continue/return) - not really an error,
+    /// but uses the error path for propagation.
+    #[error("control flow")]
+    ControlFlow(crate::eval::control::ControlFlow),
+
+    /// Break outside of loop.
+    #[error("`break` outside of loop")]
+    BreakOutsideLoop {
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Continue outside of loop.
+    #[error("`continue` outside of loop")]
+    ContinueOutsideLoop {
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Return outside of function.
+    #[error("`return` outside of function")]
+    ReturnOutsideFunction {
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Non-exhaustive match.
+    #[error("non-exhaustive match: `{value}` not covered")]
+    NonExhaustiveMatch {
+        /// Value that wasn't covered
+        value: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Refutable pattern in irrefutable context.
+    #[error("refutable pattern in local binding")]
+    RefutablePattern {
+        /// Pattern description
+        pattern: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
     /// Environment error wrapper
     #[error(transparent)]
     Environment(#[from] EnvironmentError),
@@ -170,7 +214,26 @@ impl EvalError {
             EvalError::UnsupportedLiteral { span, .. } => *span,
             EvalError::Interrupted => None,
             EvalError::StackOverflow { .. } => None,
+            EvalError::ControlFlow(_) => None,
+            EvalError::BreakOutsideLoop { span } => *span,
+            EvalError::ContinueOutsideLoop { span } => *span,
+            EvalError::ReturnOutsideFunction { span } => *span,
+            EvalError::NonExhaustiveMatch { span, .. } => *span,
+            EvalError::RefutablePattern { span, .. } => *span,
             EvalError::Environment(_) => None,
+        }
+    }
+
+    /// Check if this is a control flow "error" (not a real error).
+    pub fn is_control_flow(&self) -> bool {
+        matches!(self, EvalError::ControlFlow(_))
+    }
+
+    /// Extract control flow if this is one.
+    pub fn into_control_flow(self) -> Option<crate::eval::control::ControlFlow> {
+        match self {
+            EvalError::ControlFlow(cf) => Some(cf),
+            _ => None,
         }
     }
 }

@@ -24,7 +24,10 @@ impl Evaluate for syn::ExprUnary {
 }
 
 /// Evaluate unary negation (`-x`).
-fn eval_neg(operand: Value, span: Option<proc_macro2::Span>) -> Result<Value, EvalError> {
+pub(crate) fn eval_neg(
+    operand: Value,
+    span: Option<proc_macro2::Span>,
+) -> Result<Value, EvalError> {
     match operand {
         // Signed integers
         Value::I8(n) => n

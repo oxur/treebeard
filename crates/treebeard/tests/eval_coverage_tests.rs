@@ -5,7 +5,17 @@ fn eval(src: &str) -> std::result::Result<Value, EvalError> {
     let expr: syn::Expr = syn::parse_str(src).expect("parse failed");
     let mut env = Environment::new();
     let ctx = EvalContext::default();
-    expr.eval(&mut env, &ctx)
+    let result = expr.eval(&mut env, &ctx);
+
+    // Convert stray ControlFlow errors to appropriate errors
+    match result {
+        Err(EvalError::ControlFlow(cf)) => match cf {
+            ControlFlow::Break { .. } => Err(EvalError::BreakOutsideLoop { span: None }),
+            ControlFlow::Continue { .. } => Err(EvalError::ContinueOutsideLoop { span: None }),
+            ControlFlow::Return { .. } => Err(EvalError::ReturnOutsideFunction { span: None }),
+        },
+        other => other,
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -402,22 +412,23 @@ fn test_shift_with_various_shift_types() {
 // Unsupported Expressions
 // ═══════════════════════════════════════════════════════════════════════
 
+// if, match, and loop are now supported in Stage 1.4
 #[test]
-fn test_unsupported_if_expr() {
+fn test_if_expr_basic() {
     let result = eval("if true { 1 } else { 2 }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Ok(Value::I64(1))));
 }
 
 #[test]
-fn test_unsupported_match_expr() {
+fn test_match_expr_basic() {
     let result = eval("match 1 { 1 => 2, _ => 3 }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Ok(Value::I64(2))));
 }
 
 #[test]
-fn test_unsupported_loop_expr() {
+fn test_loop_expr_with_break() {
     let result = eval("loop { break; }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Ok(Value::Unit)));
 }
 
 #[test]
