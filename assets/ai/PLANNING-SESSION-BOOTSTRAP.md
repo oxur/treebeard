@@ -15,6 +15,7 @@ I've uploaded:
 1. The main implementation guide (0001-treebeard-implementation-guide-v3.md) - architecture and design decisions
 2. The implementation stages doc (treebeard-implementation-stages.md) - breakdown of phases into stages
 3. The CLAUDE.md for the project - conventions and patterns
+4. A sample implementation guide you can use as a source of inspiration (this was the guide for phase 1, stage 1)
 
 I need you to create a detailed implementation document for Stage [X.Y: Name].
 
@@ -40,17 +41,17 @@ The doc should be self-contained so Claude Code can implement the entire stage w
 
 | File | Purpose |
 |------|---------|
-| `0001-treebeard-implementation-guide-v3.md` | Architecture, design decisions, detailed specs |
-| `treebeard-implementation-stages.md` | Stage breakdown with descriptions |
-| `treebeard-CLAUDE.md` | Project conventions and patterns |
+| `crates/design/docs/01-draft/0001-treebeard-implementation-guide-v3.md` | Architecture, design decisions, detailed specs |
+| `crates/design/docs/05-active/0005-treebeard-implementation-stages.md` | Stage breakdown with descriptions |
+| `assets/ai/PHASE1-STAGE1.1-EXAMPLE.md` | Implentatin guide for Phase 1, Stage 1 |
+| `CLAUDE.md` | Project conventions and patterns |
 
 ### Optional (Helpful Context)
 
 | File | When to Include |
 |------|-----------------|
-| `treebeard-project-plan.md` | For high-level phase context |
-| Previous stage doc (e.g., `stage-1.2-environment.md`) | For format/style consistency |
-| `0002-treebeard-fangorn-a-vision-document.md` | For later phases where future direction matters |
+| `crates/design/docs/05-active/0004-treebeard-project-plan.md` | For high-level phase context |
+| `crates/design/docs/01-draft/0002-treebeard-fangorn-a-vision-document.md` | For later phases where future direction matters |
 
 ---
 
