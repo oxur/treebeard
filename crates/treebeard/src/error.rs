@@ -62,3 +62,154 @@ pub enum EnvironmentError {
         name: String,
     },
 }
+
+/// Errors that can occur during evaluation
+#[derive(Error, Debug, Clone)]
+pub enum EvalError {
+    /// Undefined variable reference
+    #[error("undefined variable `{name}`")]
+    UndefinedVariable {
+        /// Variable name
+        name: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Type mismatch in operation
+    #[error("type error: {message}")]
+    TypeError {
+        /// Error message
+        message: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Division by zero
+    #[error("division by zero")]
+    DivisionByZero {
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Integer overflow
+    #[error("integer overflow")]
+    IntegerOverflow {
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Invalid operand for unary operator
+    #[error("cannot apply `{op}` to {operand_type}")]
+    InvalidUnaryOperand {
+        /// Operator
+        op: String,
+        /// Operand type
+        operand_type: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Invalid operands for binary operator
+    #[error("cannot apply `{op}` to {left_type} and {right_type}")]
+    InvalidBinaryOperands {
+        /// Operator
+        op: String,
+        /// Left operand type
+        left_type: String,
+        /// Right operand type
+        right_type: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Unsupported expression type
+    #[error("unsupported expression: {kind}")]
+    UnsupportedExpr {
+        /// Expression kind
+        kind: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Unsupported literal type
+    #[error("unsupported literal: {kind}")]
+    UnsupportedLiteral {
+        /// Literal kind
+        kind: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Evaluation was interrupted
+    #[error("evaluation interrupted")]
+    Interrupted,
+
+    /// Stack overflow (too much recursion)
+    #[error("stack overflow: maximum call depth ({max}) exceeded")]
+    StackOverflow {
+        /// Maximum allowed depth
+        max: usize,
+    },
+
+    /// Environment error wrapper
+    #[error(transparent)]
+    Environment(#[from] EnvironmentError),
+}
+
+impl EvalError {
+    /// Get the source span for this error, if available.
+    pub fn span(&self) -> Option<Span> {
+        match self {
+            EvalError::UndefinedVariable { span, .. } => *span,
+            EvalError::TypeError { span, .. } => *span,
+            EvalError::DivisionByZero { span } => *span,
+            EvalError::IntegerOverflow { span } => *span,
+            EvalError::InvalidUnaryOperand { span, .. } => *span,
+            EvalError::InvalidBinaryOperands { span, .. } => *span,
+            EvalError::UnsupportedExpr { span, .. } => *span,
+            EvalError::UnsupportedLiteral { span, .. } => *span,
+            EvalError::Interrupted => None,
+            EvalError::StackOverflow { .. } => None,
+            EvalError::Environment(_) => None,
+        }
+    }
+}
+
+/// Helper to get a type name for error messages.
+pub fn type_name(value: &crate::Value) -> &'static str {
+    match value {
+        crate::Value::Unit => "()",
+        crate::Value::Bool(_) => "bool",
+        crate::Value::Char(_) => "char",
+        crate::Value::I8(_) => "i8",
+        crate::Value::I16(_) => "i16",
+        crate::Value::I32(_) => "i32",
+        crate::Value::I64(_) => "i64",
+        crate::Value::I128(_) => "i128",
+        crate::Value::Isize(_) => "isize",
+        crate::Value::U8(_) => "u8",
+        crate::Value::U16(_) => "u16",
+        crate::Value::U32(_) => "u32",
+        crate::Value::U64(_) => "u64",
+        crate::Value::U128(_) => "u128",
+        crate::Value::Usize(_) => "usize",
+        crate::Value::F32(_) => "f32",
+        crate::Value::F64(_) => "f64",
+        crate::Value::String(_) => "String",
+        crate::Value::Bytes(_) => "Vec<u8>",
+        crate::Value::Vec(_) => "Vec",
+        crate::Value::Tuple(_) => "tuple",
+        crate::Value::Array(_) => "array",
+        crate::Value::Struct(_) => "struct",
+        crate::Value::Enum(_) => "enum",
+        crate::Value::HashMap(_) => "HashMap",
+        crate::Value::Option(_) => "Option",
+        crate::Value::Result(_) => "Result",
+        crate::Value::Function(_) => "fn",
+        crate::Value::Closure(_) => "closure",
+        crate::Value::BuiltinFn(_) => "builtin_fn",
+        crate::Value::CompiledFn(_) => "compiled_fn",
+        crate::Value::Ref(_) => "&T",
+        crate::Value::RefMut(_) => "&mut T",
+    }
+}

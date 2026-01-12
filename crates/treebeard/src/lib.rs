@@ -23,15 +23,19 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+pub mod context;
 pub mod environment;
 pub mod error;
+pub mod eval;
 pub mod evaluator;
 pub mod ownership;
 pub mod value;
 
 // Re-export main types
+pub use context::EvalContext;
 pub use environment::{Binding, BindingMode, Environment, ScopeGuard};
-pub use error::{EnvironmentError, Result, TreebeardError};
+pub use error::{EnvironmentError, EvalError, Result, TreebeardError};
+pub use eval::{eval_expr, Evaluate};
 pub use value::{
     BuiltinFn, BuiltinFnPtr, ClosureValue, CompiledFn, EnumData, EnumValue, FunctionValue,
     HashableValue, StructValue, Value, ValueRef, ValueRefMut,
