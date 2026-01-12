@@ -433,14 +433,16 @@ fn test_loop_expr_with_break() {
 
 #[test]
 fn test_unsupported_function_call() {
+    // Function calls are now supported (Stage 1.5), but undefined function is an error
     let result = eval("foo()");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Err(EvalError::UndefinedVariable { .. })));
 }
 
 #[test]
 fn test_unsupported_method_call() {
+    // Method calls are now supported (Stage 1.5), but undefined variable is an error
     let result = eval("x.foo()");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(result, Err(EvalError::UndefinedVariable { .. })));
 }
 
 // ═══════════════════════════════════════════════════════════════════════

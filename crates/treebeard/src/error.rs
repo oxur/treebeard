@@ -195,6 +195,30 @@ pub enum EvalError {
         span: Option<Span>,
     },
 
+    /// Arity mismatch in function call.
+    #[error("function `{name}` expected {expected} argument(s), got {got}")]
+    ArityMismatch {
+        /// Expected argument count
+        expected: usize,
+        /// Actual argument count received
+        got: usize,
+        /// Function name
+        name: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Built-in function error.
+    #[error("built-in function `{name}`: {message}")]
+    BuiltinError {
+        /// Built-in function name
+        name: String,
+        /// Error message
+        message: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
     /// Environment error wrapper
     #[error(transparent)]
     Environment(#[from] EnvironmentError),
@@ -220,6 +244,8 @@ impl EvalError {
             EvalError::ReturnOutsideFunction { span } => *span,
             EvalError::NonExhaustiveMatch { span, .. } => *span,
             EvalError::RefutablePattern { span, .. } => *span,
+            EvalError::ArityMismatch { span, .. } => *span,
+            EvalError::BuiltinError { span, .. } => *span,
             EvalError::Environment(_) => None,
         }
     }

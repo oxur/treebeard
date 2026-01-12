@@ -1,13 +1,18 @@
 //! Expression evaluation
 
 pub mod binary;
+pub mod call;
 pub mod control;
+pub mod function;
 pub mod if_expr;
+pub mod item;
 pub mod literal;
+pub mod local;
 pub mod loops;
 pub mod match_expr;
 pub mod path;
 pub mod pattern;
+pub mod return_expr;
 pub mod unary;
 
 use crate::{Environment, EvalContext, EvalError, Value};
@@ -48,11 +53,11 @@ impl Evaluate for syn::Expr {
             syn::Expr::Break(expr) => expr.eval(env, ctx),
             syn::Expr::Continue(expr) => expr.eval(env, ctx),
 
-            // Stage 1.5: Functions (not yet implemented)
-            syn::Expr::Call(_) => Err(not_yet_implemented("function call", self)),
-            syn::Expr::MethodCall(_) => Err(not_yet_implemented("method call", self)),
+            // Stage 1.5: Functions
+            syn::Expr::Call(expr) => expr.eval(env, ctx),
+            syn::Expr::MethodCall(expr) => expr.eval(env, ctx),
+            syn::Expr::Return(expr) => expr.eval(env, ctx),
             syn::Expr::Closure(_) => Err(not_yet_implemented("closure", self)),
-            syn::Expr::Return(_) => Err(not_yet_implemented("return", self)),
 
             // Stage 1.6: Blocks
             syn::Expr::Block(expr) => if_expr::eval_block(&expr.block, env, ctx),

@@ -420,8 +420,12 @@ fn test_unsupported_repeat() {
 
 #[test]
 fn test_unsupported_return() {
+    // Return is now supported (Stage 1.5), but return outside function is an error
     let result = eval("return 42");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(matches!(
+        result,
+        Err(EvalError::ReturnOutsideFunction { .. })
+    ));
 }
 
 #[test]
