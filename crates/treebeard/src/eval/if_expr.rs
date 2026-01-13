@@ -111,3 +111,152 @@ fn expr_span(expr: &syn::Expr) -> Option<proc_macro2::Span> {
     use quote::ToTokens;
     expr.to_token_stream().into_iter().next().map(|t| t.span())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_if_true_branch() {
+        let expr: syn::ExprIf = syn::parse_quote!(if true { 42 } else { 0 });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_if_false_branch() {
+        let expr: syn::ExprIf = syn::parse_quote!(if false { 42 } else { 0 });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(0));
+    }
+
+    #[test]
+    fn test_if_without_else_true() {
+        let expr: syn::ExprIf = syn::parse_quote!(if true {
+            42
+        });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_if_without_else_false() {
+        let expr: syn::ExprIf = syn::parse_quote!(if false {
+            42
+        });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_if_non_bool_condition() {
+        let expr: syn::ExprIf = syn::parse_quote!(if 42 { 1 } else { 0 });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EvalError::TypeError { message, .. } => {
+                assert!(message.contains("expected `bool`"));
+            }
+            _ => panic!("Expected TypeError"),
+        }
+    }
+
+    #[test]
+    fn test_if_else_if() {
+        let expr: syn::ExprIf = syn::parse_quote! {
+            if false { 1 } else if true { 2 } else { 3 }
+        };
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(2));
+    }
+
+    #[test]
+    fn test_if_else_if_chain() {
+        let expr: syn::ExprIf = syn::parse_quote! {
+            if false { 1 } else if false { 2 } else { 3 }
+        };
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(3));
+    }
+
+    #[test]
+    fn test_eval_block_single_expr() {
+        let block: syn::Block = syn::parse_quote!({ 42 });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_block(&block, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_eval_block_multiple_stmts() {
+        let block: syn::Block = syn::parse_quote!({
+            1 + 1;
+            2 + 2;
+            3 + 3
+        });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_block(&block, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(6)); // Last expression without semicolon
+    }
+
+    #[test]
+    fn test_eval_block_empty() {
+        let block: syn::Block = syn::parse_quote!({});
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_block(&block, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_block_scoped() {
+        // Verify that blocks create a new scope
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let initial_depth = env.depth();
+        let block: syn::Block = syn::parse_quote!({ 42 });
+        let _ = eval_block(&block, &mut env, &ctx).unwrap();
+
+        // After eval_block, depth should be back to initial
+        assert_eq!(env.depth(), initial_depth);
+    }
+
+    #[test]
+    fn test_eval_block_expr_no_semi() {
+        // Test that expression without semicolon is returned
+        let block: syn::Block = syn::parse_quote!({ 42 });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_block(&block, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_eval_block_expr_with_semi() {
+        // Test that expression with semicolon returns unit
+        let block: syn::Block = syn::parse_quote!({
+            42;
+        });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_block(&block, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+}

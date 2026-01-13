@@ -58,3 +58,73 @@ impl EvalContext {
         self.interrupt.store(false, Ordering::Relaxed);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_context() {
+        let ctx = EvalContext::default();
+        assert_eq!(ctx.max_call_depth, 1000);
+        assert!(!ctx.is_interrupted());
+        assert!(!ctx.trace);
+    }
+
+    #[test]
+    fn test_new_context() {
+        let ctx = EvalContext::new();
+        assert_eq!(ctx.max_call_depth, 1000);
+        assert!(!ctx.is_interrupted());
+    }
+
+    #[test]
+    fn test_with_max_call_depth() {
+        let ctx = EvalContext::with_max_call_depth(500);
+        assert_eq!(ctx.max_call_depth, 500);
+        assert!(!ctx.is_interrupted());
+    }
+
+    #[test]
+    fn test_interrupt_and_check() {
+        let ctx = EvalContext::new();
+        assert!(!ctx.is_interrupted());
+
+        ctx.interrupt();
+        assert!(ctx.is_interrupted());
+    }
+
+    #[test]
+    fn test_reset_interrupt() {
+        let ctx = EvalContext::new();
+        ctx.interrupt();
+        assert!(ctx.is_interrupted());
+
+        ctx.reset_interrupt();
+        assert!(!ctx.is_interrupted());
+    }
+
+    #[test]
+    fn test_clone_shares_interrupt() {
+        let ctx1 = EvalContext::new();
+        let ctx2 = ctx1.clone();
+
+        ctx1.interrupt();
+        // Both contexts share the same interrupt flag
+        assert!(ctx1.is_interrupted());
+        assert!(ctx2.is_interrupted());
+
+        ctx2.reset_interrupt();
+        assert!(!ctx1.is_interrupted());
+        assert!(!ctx2.is_interrupted());
+    }
+
+    #[test]
+    fn test_trace_flag() {
+        let mut ctx = EvalContext::new();
+        assert!(!ctx.trace);
+
+        ctx.trace = true;
+        assert!(ctx.trace);
+    }
+}

@@ -203,4 +203,213 @@ mod tests {
             EvalError::InvalidUnaryOperand { .. }
         ));
     }
+
+    // Additional negation tests for all signed integer types
+    #[test]
+    fn test_neg_i8() {
+        let result = eval_neg(Value::I8(42), None).unwrap();
+        assert_eq!(result, Value::I8(-42));
+    }
+
+    #[test]
+    fn test_neg_i16() {
+        let result = eval_neg(Value::I16(42), None).unwrap();
+        assert_eq!(result, Value::I16(-42));
+    }
+
+    #[test]
+    fn test_neg_i128() {
+        let result = eval_neg(Value::I128(42), None).unwrap();
+        assert_eq!(result, Value::I128(-42));
+    }
+
+    #[test]
+    fn test_neg_isize() {
+        let result = eval_neg(Value::Isize(42), None).unwrap();
+        assert_eq!(result, Value::Isize(-42));
+    }
+
+    // Overflow tests for negation
+    #[test]
+    fn test_neg_i8_overflow() {
+        let result = eval_neg(Value::I8(i8::MIN), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::IntegerOverflow { .. }
+        ));
+    }
+
+    #[test]
+    fn test_neg_i16_overflow() {
+        let result = eval_neg(Value::I16(i16::MIN), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::IntegerOverflow { .. }
+        ));
+    }
+
+    #[test]
+    fn test_neg_i32_overflow() {
+        let result = eval_neg(Value::I32(i32::MIN), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::IntegerOverflow { .. }
+        ));
+    }
+
+    #[test]
+    fn test_neg_i64_overflow() {
+        let result = eval_neg(Value::I64(i64::MIN), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::IntegerOverflow { .. }
+        ));
+    }
+
+    #[test]
+    fn test_neg_i128_overflow() {
+        let result = eval_neg(Value::I128(i128::MIN), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::IntegerOverflow { .. }
+        ));
+    }
+
+    #[test]
+    fn test_neg_isize_overflow() {
+        let result = eval_neg(Value::Isize(isize::MIN), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::IntegerOverflow { .. }
+        ));
+    }
+
+    // Additional NOT tests for all integer types
+    #[test]
+    fn test_not_i8() {
+        let result = eval_not(Value::I8(0b1010), None).unwrap();
+        assert_eq!(result, Value::I8(!0b1010));
+    }
+
+    #[test]
+    fn test_not_i16() {
+        let result = eval_not(Value::I16(0b1010), None).unwrap();
+        assert_eq!(result, Value::I16(!0b1010));
+    }
+
+    #[test]
+    fn test_not_i64() {
+        let result = eval_not(Value::I64(0b1010), None).unwrap();
+        assert_eq!(result, Value::I64(!0b1010));
+    }
+
+    #[test]
+    fn test_not_i128() {
+        let result = eval_not(Value::I128(0b1010), None).unwrap();
+        assert_eq!(result, Value::I128(!0b1010));
+    }
+
+    #[test]
+    fn test_not_isize() {
+        let result = eval_not(Value::Isize(0b1010), None).unwrap();
+        assert_eq!(result, Value::Isize(!0b1010));
+    }
+
+    #[test]
+    fn test_not_u16() {
+        let result = eval_not(Value::U16(0b1010), None).unwrap();
+        assert_eq!(result, Value::U16(!0b1010));
+    }
+
+    #[test]
+    fn test_not_u32() {
+        let result = eval_not(Value::U32(0b1010), None).unwrap();
+        assert_eq!(result, Value::U32(!0b1010));
+    }
+
+    #[test]
+    fn test_not_u64() {
+        let result = eval_not(Value::U64(0b1010), None).unwrap();
+        assert_eq!(result, Value::U64(!0b1010));
+    }
+
+    #[test]
+    fn test_not_u128() {
+        let result = eval_not(Value::U128(0b1010), None).unwrap();
+        assert_eq!(result, Value::U128(!0b1010));
+    }
+
+    #[test]
+    fn test_not_usize() {
+        let result = eval_not(Value::Usize(0b1010), None).unwrap();
+        assert_eq!(result, Value::Usize(!0b1010));
+    }
+
+    // Dereference RefMut test
+    #[test]
+    fn test_deref_refmut() {
+        use crate::value::ValueRefMut;
+        use std::sync::{Arc, RwLock};
+        let val = Value::I64(42);
+        let refmut_val = Value::RefMut(ValueRefMut {
+            value: Arc::new(RwLock::new(val)),
+            tag: 0,
+        });
+        let result = eval_deref(refmut_val, None).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    // Integration tests with ExprUnary
+    #[test]
+    fn test_expr_unary_neg() {
+        let expr: syn::ExprUnary = syn::parse_quote!(-42);
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(-42));
+    }
+
+    #[test]
+    fn test_expr_unary_not_bool() {
+        let expr: syn::ExprUnary = syn::parse_quote!(!true);
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_expr_unary_not_int() {
+        let expr: syn::ExprUnary = syn::parse_quote!(!5);
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(!5));
+    }
+
+    #[test]
+    fn test_neg_bool_fails() {
+        let result = eval_neg(Value::Bool(true), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::InvalidUnaryOperand { .. }
+        ));
+    }
+
+    #[test]
+    fn test_not_float_fails() {
+        let result = eval_not(Value::F64(3.14), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::InvalidUnaryOperand { .. }
+        ));
+    }
 }

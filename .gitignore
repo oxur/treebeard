@@ -28,6 +28,7 @@ assets/ai/ai-rust
 # Test artifacts
 *.profraw
 *.profdata
+crates/*/lcov.info
 
 # Images
 *.afphoto
