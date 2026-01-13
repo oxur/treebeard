@@ -847,3 +847,120 @@ fn eval_shr(
         }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eval_add_integers() {
+        let result = eval_add(Value::I64(5), Value::I64(3), None).unwrap();
+        assert_eq!(result, Value::I64(8));
+    }
+
+    #[test]
+    fn test_eval_add_floats() {
+        let result = eval_add(Value::F64(2.5), Value::F64(1.5), None).unwrap();
+        assert_eq!(result, Value::F64(4.0));
+    }
+
+    #[test]
+    fn test_eval_add_strings() {
+        let result = eval_add(Value::string("hello"), Value::string(" world"), None).unwrap();
+        assert_eq!(result, Value::string("hello world"));
+    }
+
+    #[test]
+    fn test_eval_sub_integers() {
+        let result = eval_sub(Value::I64(10), Value::I64(3), None).unwrap();
+        assert_eq!(result, Value::I64(7));
+    }
+
+    #[test]
+    fn test_eval_mul_integers() {
+        let result = eval_mul(Value::I64(4), Value::I64(5), None).unwrap();
+        assert_eq!(result, Value::I64(20));
+    }
+
+    #[test]
+    fn test_eval_div_integers() {
+        let result = eval_div(Value::I64(20), Value::I64(4), None).unwrap();
+        assert_eq!(result, Value::I64(5));
+    }
+
+    #[test]
+    fn test_eval_div_by_zero() {
+        let result = eval_div(Value::I64(10), Value::I64(0), None);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EvalError::DivisionByZero { .. } => {}
+            _ => panic!("Expected DivisionByZero error"),
+        }
+    }
+
+    #[test]
+    fn test_eval_rem_integers() {
+        let result = eval_rem(Value::I64(10), Value::I64(3), None).unwrap();
+        assert_eq!(result, Value::I64(1));
+    }
+
+    #[test]
+    fn test_eval_and_true() {
+        let expr: syn::ExprBinary = syn::parse_quote!(true && true);
+        let mut env = crate::Environment::new();
+        let ctx = crate::EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_eval_and_false() {
+        let expr: syn::ExprBinary = syn::parse_quote!(true && false);
+        let mut env = crate::Environment::new();
+        let ctx = crate::EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_eval_or_true() {
+        let expr: syn::ExprBinary = syn::parse_quote!(false || true);
+        let mut env = crate::Environment::new();
+        let ctx = crate::EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_eval_or_false() {
+        let expr: syn::ExprBinary = syn::parse_quote!(false || false);
+        let mut env = crate::Environment::new();
+        let ctx = crate::EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_eval_shl() {
+        let result = eval_shl(Value::I64(4), Value::U32(2), None).unwrap();
+        assert_eq!(result, Value::I64(16));
+    }
+
+    #[test]
+    fn test_eval_shr() {
+        let result = eval_shr(Value::I64(16), Value::U32(2), None).unwrap();
+        assert_eq!(result, Value::I64(4));
+    }
+
+    #[test]
+    fn test_is_assignment_op_add_assign() {
+        let op: syn::BinOp = syn::parse_quote!(+=);
+        assert!(is_assignment_op(&op));
+    }
+
+    #[test]
+    fn test_is_assignment_op_add() {
+        let op: syn::BinOp = syn::parse_quote!(+);
+        assert!(!is_assignment_op(&op));
+    }
+}

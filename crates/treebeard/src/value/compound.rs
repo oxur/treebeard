@@ -124,3 +124,123 @@ impl EnumValue {
         self.variant == variant
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_struct_value_new() {
+        let s = StructValue::new("Point");
+
+        assert_eq!(s.type_name, "Point");
+        assert_eq!(s.fields.len(), 0);
+        assert!(!s.is_tuple_struct);
+    }
+
+    #[test]
+    fn test_struct_value_tuple() {
+        let s = StructValue::tuple("Pair");
+
+        assert_eq!(s.type_name, "Pair");
+        assert_eq!(s.fields.len(), 0);
+        assert!(s.is_tuple_struct);
+    }
+
+    #[test]
+    fn test_struct_value_with_field() {
+        let s = StructValue::new("Point")
+            .with_field("x", Value::I64(10))
+            .with_field("y", Value::I64(20));
+
+        assert_eq!(s.fields.len(), 2);
+        assert_eq!(s.get("x"), Some(&Value::I64(10)));
+        assert_eq!(s.get("y"), Some(&Value::I64(20)));
+    }
+
+    #[test]
+    fn test_struct_value_get() {
+        let mut s = StructValue::new("Person");
+        s.fields.insert("name".to_string(), Value::string("Alice"));
+        s.fields.insert("age".to_string(), Value::I64(30));
+
+        assert_eq!(s.get("name"), Some(&Value::string("Alice")));
+        assert_eq!(s.get("age"), Some(&Value::I64(30)));
+        assert_eq!(s.get("missing"), None);
+    }
+
+    #[test]
+    fn test_struct_value_get_index() {
+        let s = StructValue::tuple("Pair")
+            .with_field("0", Value::I64(1))
+            .with_field("1", Value::I64(2));
+
+        assert_eq!(s.get_index(0), Some(&Value::I64(1)));
+        assert_eq!(s.get_index(1), Some(&Value::I64(2)));
+        assert_eq!(s.get_index(2), None);
+    }
+
+    #[test]
+    fn test_enum_value_unit() {
+        let e = EnumValue::unit("Option", "None");
+
+        assert_eq!(e.type_name, "Option");
+        assert_eq!(e.variant, "None");
+        assert_eq!(e.data, EnumData::Unit);
+    }
+
+    #[test]
+    fn test_enum_value_tuple() {
+        let e = EnumValue::tuple("Option", "Some", vec![Value::I64(42)]);
+
+        assert_eq!(e.type_name, "Option");
+        assert_eq!(e.variant, "Some");
+        assert_eq!(e.data, EnumData::Tuple(vec![Value::I64(42)]));
+    }
+
+    #[test]
+    fn test_enum_value_with_struct() {
+        let mut fields = IndexMap::new();
+        fields.insert("x".to_string(), Value::I64(10));
+        fields.insert("y".to_string(), Value::I64(20));
+
+        let e = EnumValue::with_struct("Message", "Move", fields.clone());
+
+        assert_eq!(e.type_name, "Message");
+        assert_eq!(e.variant, "Move");
+        assert_eq!(e.data, EnumData::Struct(fields));
+    }
+
+    #[test]
+    fn test_enum_value_is_variant() {
+        let e1 = EnumValue::unit("Option", "None");
+        let e2 = EnumValue::tuple("Option", "Some", vec![Value::I64(42)]);
+
+        assert!(e1.is_variant("None"));
+        assert!(!e1.is_variant("Some"));
+
+        assert!(e2.is_variant("Some"));
+        assert!(!e2.is_variant("None"));
+    }
+
+    #[test]
+    fn test_enum_data_unit() {
+        let data = EnumData::Unit;
+        assert_eq!(data, EnumData::Unit);
+    }
+
+    #[test]
+    fn test_enum_data_tuple() {
+        let data = EnumData::Tuple(vec![Value::I64(1), Value::I64(2)]);
+        assert_eq!(data, EnumData::Tuple(vec![Value::I64(1), Value::I64(2)]));
+    }
+
+    #[test]
+    fn test_enum_data_struct() {
+        let mut fields = IndexMap::new();
+        fields.insert("a".to_string(), Value::I64(1));
+
+        let data = EnumData::Struct(fields.clone());
+        assert_eq!(data, EnumData::Struct(fields));
+    }
+}

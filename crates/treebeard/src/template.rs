@@ -223,15 +223,14 @@ impl TemplateNode {
                     match node {
                         TemplateNode::UnquoteSplicing(name) => {
                             // Look up the value
-                            let value = bindings.get(name).ok_or_else(|| {
-                                EvalError::TemplateError {
+                            let value =
+                                bindings.get(name).ok_or_else(|| EvalError::TemplateError {
                                     message: format!(
                                         "Unquote-splicing placeholder '{}' not found in bindings",
                                         name
                                     ),
                                     span: None,
-                                }
-                            })?;
+                                })?;
 
                             // The value must be a sequence - splice its elements
                             let elements = value.as_sequence()?;
@@ -379,10 +378,7 @@ mod tests {
 
         assert_eq!(template.metadata.source, Some("test.oxr".to_string()));
         assert_eq!(template.metadata.line, Some(10));
-        assert_eq!(
-            template.metadata.macro_name,
-            Some("test_macro".to_string())
-        );
+        assert_eq!(template.metadata.macro_name, Some("test_macro".to_string()));
     }
 
     #[test]

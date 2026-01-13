@@ -178,3 +178,277 @@ fn builtin_panic(args: &[Value]) -> Result<Value, String> {
 
     Err(format!("panic: {}", message))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_with_prelude_creates_environment() {
+        let env = Environment::with_prelude();
+
+        // Check that built-in functions are defined
+        assert!(env.contains("print"));
+        assert!(env.contains("println"));
+        assert!(env.contains("type_of"));
+        assert!(env.contains("dbg"));
+        assert!(env.contains("assert"));
+        assert!(env.contains("assert_eq"));
+        assert!(env.contains("panic"));
+    }
+
+    #[test]
+    fn test_load_prelude_adds_builtins() {
+        let mut env = Environment::new();
+        assert!(!env.contains("print"));
+
+        env.load_prelude();
+
+        assert!(env.contains("print"));
+        assert!(env.contains("println"));
+        assert!(env.contains("type_of"));
+        assert!(env.contains("dbg"));
+        assert!(env.contains("assert"));
+        assert!(env.contains("assert_eq"));
+        assert!(env.contains("panic"));
+    }
+
+    #[test]
+    fn test_builtin_print_no_args() {
+        let result = builtin_print(&[]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_print_single_arg() {
+        let result = builtin_print(&[Value::I64(42)]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_print_multiple_args() {
+        let result = builtin_print(&[Value::I64(1), Value::string("hello"), Value::Bool(true)]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_println_no_args() {
+        let result = builtin_println(&[]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_println_with_args() {
+        let result = builtin_println(&[Value::I64(42), Value::string("test")]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_type_of_primitives() {
+        assert_eq!(
+            builtin_type_of(&[Value::Unit]).unwrap(),
+            Value::string("()")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Bool(true)]).unwrap(),
+            Value::string("bool")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Char('a')]).unwrap(),
+            Value::string("char")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::I8(1)]).unwrap(),
+            Value::string("i8")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::I16(1)]).unwrap(),
+            Value::string("i16")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::I32(1)]).unwrap(),
+            Value::string("i32")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::I64(1)]).unwrap(),
+            Value::string("i64")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::I128(1)]).unwrap(),
+            Value::string("i128")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Isize(1)]).unwrap(),
+            Value::string("isize")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::U8(1)]).unwrap(),
+            Value::string("u8")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::U16(1)]).unwrap(),
+            Value::string("u16")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::U32(1)]).unwrap(),
+            Value::string("u32")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::U64(1)]).unwrap(),
+            Value::string("u64")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::U128(1)]).unwrap(),
+            Value::string("u128")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Usize(1)]).unwrap(),
+            Value::string("usize")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::F32(1.0)]).unwrap(),
+            Value::string("f32")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::F64(1.0)]).unwrap(),
+            Value::string("f64")
+        );
+    }
+
+    #[test]
+    fn test_builtin_type_of_collections() {
+        assert_eq!(
+            builtin_type_of(&[Value::string("hi")]).unwrap(),
+            Value::string("String")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Vec(Arc::new(vec![]))]).unwrap(),
+            Value::string("Vec")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Tuple(Arc::new(vec![]))]).unwrap(),
+            Value::string("tuple")
+        );
+        assert_eq!(
+            builtin_type_of(&[Value::Array(Arc::new(vec![]))]).unwrap(),
+            Value::string("array")
+        );
+    }
+
+    #[test]
+    fn test_builtin_type_of_wrong_arity() {
+        let result = builtin_type_of(&[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 argument"));
+
+        let result = builtin_type_of(&[Value::I64(1), Value::I64(2)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 argument"));
+    }
+
+    #[test]
+    fn test_builtin_dbg_returns_value() {
+        let value = Value::I64(42);
+        let result = builtin_dbg(&[value.clone()]);
+        assert_eq!(result, Ok(value));
+    }
+
+    #[test]
+    fn test_builtin_dbg_wrong_arity() {
+        let result = builtin_dbg(&[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 argument"));
+
+        let result = builtin_dbg(&[Value::I64(1), Value::I64(2)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 argument"));
+    }
+
+    #[test]
+    fn test_builtin_assert_true() {
+        let result = builtin_assert(&[Value::Bool(true)]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_assert_false() {
+        let result = builtin_assert(&[Value::Bool(false)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("assertion failed"));
+    }
+
+    #[test]
+    fn test_builtin_assert_non_bool() {
+        let result = builtin_assert(&[Value::I64(42)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects bool"));
+    }
+
+    #[test]
+    fn test_builtin_assert_wrong_arity() {
+        let result = builtin_assert(&[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 argument"));
+
+        let result = builtin_assert(&[Value::Bool(true), Value::Bool(true)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 argument"));
+    }
+
+    #[test]
+    fn test_builtin_assert_eq_equal() {
+        let result = builtin_assert_eq(&[Value::I64(42), Value::I64(42)]);
+        assert_eq!(result, Ok(Value::Unit));
+    }
+
+    #[test]
+    fn test_builtin_assert_eq_not_equal() {
+        let result = builtin_assert_eq(&[Value::I64(42), Value::I64(43)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("assertion failed"));
+    }
+
+    #[test]
+    fn test_builtin_assert_eq_different_types() {
+        let result = builtin_assert_eq(&[Value::I64(42), Value::string("42")]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("assertion failed"));
+    }
+
+    #[test]
+    fn test_builtin_assert_eq_wrong_arity() {
+        let result = builtin_assert_eq(&[Value::I64(1)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 2 arguments"));
+
+        let result = builtin_assert_eq(&[Value::I64(1), Value::I64(2), Value::I64(3)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 2 arguments"));
+    }
+
+    #[test]
+    fn test_builtin_panic_no_args() {
+        let result = builtin_panic(&[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("explicit panic"));
+    }
+
+    #[test]
+    fn test_builtin_panic_with_message() {
+        let result = builtin_panic(&[Value::string("something went wrong")]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("panic:"));
+        assert!(err.contains("something went wrong"));
+    }
+
+    #[test]
+    fn test_builtin_panic_with_multiple_args() {
+        let result = builtin_panic(&[Value::string("error"), Value::I64(42)]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("panic:"));
+        assert!(err.contains("error"));
+        assert!(err.contains("42"));
+    }
+}

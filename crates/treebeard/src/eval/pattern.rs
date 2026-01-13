@@ -411,3 +411,252 @@ pub fn apply_bindings(env: &mut Environment, bindings: MatchBindings) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Value;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_match_wild_pattern() {
+        let pat: syn::Pat = syn::parse_quote!(_);
+        let value = Value::I64(42);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().len(), 0); // No bindings
+    }
+
+    #[test]
+    fn test_match_ident_pattern() {
+        let pat: syn::Pat = syn::parse_quote!(x);
+        let value = Value::I64(42);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        let bindings = result.unwrap();
+        assert_eq!(bindings.len(), 1);
+        assert_eq!(bindings[0].0, "x");
+        assert_eq!(bindings[0].1, Value::I64(42));
+        assert!(!bindings[0].2); // Not mutable
+    }
+
+    #[test]
+    fn test_match_literal_pattern_matches() {
+        let pat: syn::Pat = syn::parse_quote!(42);
+        let value = Value::I64(42);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_match_literal_pattern_no_match() {
+        let pat: syn::Pat = syn::parse_quote!(42);
+        let value = Value::I64(99);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_match_tuple_pattern() {
+        let pat: syn::Pat = syn::parse_quote!((x, y));
+        let value = Value::Tuple(Arc::new(vec![Value::I64(1), Value::I64(2)]));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        let bindings = result.unwrap();
+        assert_eq!(bindings.len(), 2);
+    }
+
+    #[test]
+    fn test_match_tuple_pattern_wrong_length() {
+        let pat: syn::Pat = syn::parse_quote!((x, y));
+        let value = Value::Tuple(Arc::new(vec![Value::I64(1)]));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_match_option_some() {
+        let pat: syn::Pat = syn::parse_quote!(Some(x));
+        let value = Value::Option(Arc::new(Some(Value::I64(42))));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        let bindings = result.unwrap();
+        assert_eq!(bindings.len(), 1);
+        assert_eq!(bindings[0].1, Value::I64(42));
+    }
+
+    #[test]
+    fn test_match_option_none() {
+        let pat: syn::Pat = syn::parse_quote!(None);
+        let value = Value::Option(Arc::new(None));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_match_result_ok() {
+        let pat: syn::Pat = syn::parse_quote!(Ok(x));
+        let value = Value::Result(Arc::new(Ok(Value::I64(42))));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        let bindings = result.unwrap();
+        assert_eq!(bindings[0].1, Value::I64(42));
+    }
+
+    #[test]
+    fn test_match_result_err() {
+        let pat: syn::Pat = syn::parse_quote!(Err(e));
+        let value = Value::Result(Arc::new(Err(Value::string("error"))));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        let bindings = result.unwrap();
+        assert_eq!(bindings[0].1, Value::string("error"));
+    }
+
+    #[test]
+    fn test_match_range_inclusive() {
+        let pat: syn::Pat = syn::parse_quote!(1..=5);
+        assert!(match_pattern(&pat, &Value::I64(3), None).unwrap().is_some());
+        assert!(match_pattern(&pat, &Value::I64(1), None).unwrap().is_some());
+        assert!(match_pattern(&pat, &Value::I64(5), None).unwrap().is_some());
+        assert!(match_pattern(&pat, &Value::I64(0), None).unwrap().is_none());
+        assert!(match_pattern(&pat, &Value::I64(6), None).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_match_range_exclusive() {
+        let pat: syn::Pat = syn::parse_quote!(1..5);
+        assert!(match_pattern(&pat, &Value::I64(3), None).unwrap().is_some());
+        assert!(match_pattern(&pat, &Value::I64(1), None).unwrap().is_some());
+        assert!(match_pattern(&pat, &Value::I64(4), None).unwrap().is_some());
+        assert!(match_pattern(&pat, &Value::I64(5), None).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_match_slice_pattern_exact() {
+        let pat: syn::Pat = syn::parse_quote!([a, b, c]);
+        let value = Value::Vec(Arc::new(vec![Value::I64(1), Value::I64(2), Value::I64(3)]));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        let bindings = result.unwrap();
+        assert_eq!(bindings.len(), 3);
+    }
+
+    #[test]
+    fn test_match_slice_pattern_wrong_length() {
+        let pat: syn::Pat = syn::parse_quote!([a, b]);
+        let value = Value::Vec(Arc::new(vec![Value::I64(1), Value::I64(2), Value::I64(3)]));
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_value_in_range_inclusive_i64() {
+        assert!(value_in_range_inclusive(
+            &Value::I64(5),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(value_in_range_inclusive(
+            &Value::I64(1),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(value_in_range_inclusive(
+            &Value::I64(10),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(!value_in_range_inclusive(
+            &Value::I64(0),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(!value_in_range_inclusive(
+            &Value::I64(11),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+    }
+
+    #[test]
+    fn test_value_in_range_exclusive_i64() {
+        assert!(value_in_range_exclusive(
+            &Value::I64(5),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(value_in_range_exclusive(
+            &Value::I64(1),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(!value_in_range_exclusive(
+            &Value::I64(10),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+        assert!(!value_in_range_exclusive(
+            &Value::I64(0),
+            &Value::I64(1),
+            &Value::I64(10)
+        ));
+    }
+
+    #[test]
+    fn test_apply_bindings_immutable() {
+        let mut env = Environment::new();
+        let bindings = vec![("x".to_string(), Value::I64(42), false)];
+        apply_bindings(&mut env, bindings);
+        assert_eq!(env.get("x"), Some(&Value::I64(42)));
+    }
+
+    #[test]
+    fn test_apply_bindings_mutable() {
+        let mut env = Environment::new();
+        let bindings = vec![("x".to_string(), Value::I64(42), true)];
+        apply_bindings(&mut env, bindings);
+        assert_eq!(env.get("x"), Some(&Value::I64(42)));
+        // Can mutate
+        assert!(env.get_mut("x").is_ok());
+    }
+
+    #[test]
+    fn test_match_rest_pattern() {
+        let pat: syn::Pat = syn::parse_quote!(..);
+        let value = Value::I64(42);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().len(), 0); // No bindings
+    }
+
+    #[test]
+    fn test_match_paren_pattern() {
+        let pat: syn::Pat = syn::parse_quote!((x));
+        let value = Value::I64(42);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_match_reference_pattern() {
+        let pat: syn::Pat = syn::parse_quote!(&x);
+        let value = Value::I64(42);
+        let result = match_pattern(&pat, &value, None).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_eval_const_expr_literal() {
+        let expr: syn::Expr = syn::parse_quote!(42);
+        let result = eval_const_expr(&expr).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_eval_const_expr_negated() {
+        let expr: syn::Expr = syn::parse_quote!(-5);
+        let result = eval_const_expr(&expr).unwrap();
+        assert_eq!(result, Value::I64(-5));
+    }
+}

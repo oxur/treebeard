@@ -417,3 +417,229 @@ impl<T: Into<Value>, E: Into<Value>> From<Result<T, E>> for Value {
         Value::Result(Arc::new(res.map(Into::into).map_err(Into::into)))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Constructors
+    #[test]
+    fn test_string_constructor() {
+        let v = Value::string("hello");
+        assert!(matches!(v, Value::String(_)));
+    }
+
+    #[test]
+    fn test_vec_constructor() {
+        let v = Value::vec(vec![Value::I64(1), Value::I64(2)]);
+        assert!(matches!(v, Value::Vec(_)));
+    }
+
+    #[test]
+    fn test_tuple_constructor() {
+        let v = Value::tuple(vec![Value::I64(1), Value::Bool(true)]);
+        assert!(matches!(v, Value::Tuple(_)));
+    }
+
+    #[test]
+    fn test_some_constructor() {
+        let v = Value::some(Value::I64(42));
+        assert!(matches!(v, Value::Option(_)));
+    }
+
+    #[test]
+    fn test_none_constructor() {
+        let v = Value::none();
+        match v {
+            Value::Option(opt) => assert!(opt.is_none()),
+            _ => panic!("Expected Option"),
+        }
+    }
+
+    #[test]
+    fn test_ok_constructor() {
+        let v = Value::ok(Value::I64(42));
+        assert!(matches!(v, Value::Result(_)));
+    }
+
+    #[test]
+    fn test_err_constructor() {
+        let v = Value::err(Value::string("error"));
+        assert!(matches!(v, Value::Result(_)));
+    }
+
+    // Predicates
+    #[test]
+    fn test_is_unit() {
+        assert!(Value::Unit.is_unit());
+        assert!(!Value::I64(42).is_unit());
+    }
+
+    #[test]
+    fn test_is_bool() {
+        assert!(Value::Bool(true).is_bool());
+        assert!(!Value::I64(42).is_bool());
+    }
+
+    #[test]
+    fn test_is_integer() {
+        assert!(Value::I64(42).is_integer());
+        assert!(Value::U32(10).is_integer());
+        assert!(!Value::F64(1.5).is_integer());
+    }
+
+    #[test]
+    fn test_is_float() {
+        assert!(Value::F64(1.5).is_float());
+        assert!(Value::F32(2.5).is_float());
+        assert!(!Value::I64(42).is_float());
+    }
+
+    #[test]
+    fn test_is_numeric() {
+        assert!(Value::I64(42).is_numeric());
+        assert!(Value::F64(1.5).is_numeric());
+        assert!(!Value::string("hi").is_numeric());
+    }
+
+    #[test]
+    fn test_is_string() {
+        assert!(Value::string("hello").is_string());
+        assert!(!Value::I64(42).is_string());
+    }
+
+    // Extractors
+    #[test]
+    fn test_as_bool() {
+        assert_eq!(Value::Bool(true).as_bool(), Some(true));
+        assert_eq!(Value::I64(42).as_bool(), None);
+    }
+
+    #[test]
+    fn test_as_i64() {
+        assert_eq!(Value::I64(42).as_i64(), Some(42));
+        assert_eq!(Value::I32(10).as_i64(), Some(10));
+        assert_eq!(Value::string("hi").as_i64(), None);
+    }
+
+    #[test]
+    fn test_as_usize() {
+        assert_eq!(Value::Usize(42).as_usize(), Some(42));
+        assert_eq!(Value::U64(10).as_usize(), Some(10));
+        assert_eq!(Value::I64(-1).as_usize(), None); // Negative
+    }
+
+    #[test]
+    fn test_as_f64() {
+        assert_eq!(Value::F64(1.5).as_f64(), Some(1.5));
+        assert_eq!(Value::F32(2.5).as_f64(), Some(2.5));
+        assert_eq!(Value::string("hi").as_f64(), None);
+    }
+
+    #[test]
+    fn test_as_str() {
+        let v = Value::string("hello");
+        assert_eq!(v.as_str(), Some("hello"));
+        assert_eq!(Value::I64(42).as_str(), None);
+    }
+
+    #[test]
+    fn test_as_vec() {
+        let v = Value::vec(vec![Value::I64(1), Value::I64(2)]);
+        let vec_ref = v.as_vec().unwrap();
+        assert_eq!(vec_ref.len(), 2);
+        assert_eq!(Value::I64(42).as_vec(), None);
+    }
+
+    // PartialEq
+    #[test]
+    fn test_partialeq_primitives() {
+        assert_eq!(Value::Unit, Value::Unit);
+        assert_eq!(Value::Bool(true), Value::Bool(true));
+        assert_ne!(Value::Bool(true), Value::Bool(false));
+        assert_eq!(Value::I64(42), Value::I64(42));
+        assert_ne!(Value::I64(42), Value::I64(43));
+    }
+
+    #[test]
+    fn test_partialeq_collections() {
+        let v1 = Value::vec(vec![Value::I64(1), Value::I64(2)]);
+        let v2 = Value::vec(vec![Value::I64(1), Value::I64(2)]);
+        let v3 = Value::vec(vec![Value::I64(1), Value::I64(3)]);
+        assert_eq!(v1, v2);
+        assert_ne!(v1, v3);
+    }
+
+    #[test]
+    fn test_partialeq_option() {
+        let some1 = Value::some(Value::I64(42));
+        let some2 = Value::some(Value::I64(42));
+        let some3 = Value::some(Value::I64(43));
+        let none1 = Value::none();
+        let none2 = Value::none();
+
+        assert_eq!(some1, some2);
+        assert_ne!(some1, some3);
+        assert_eq!(none1, none2);
+        assert_ne!(some1, none1);
+    }
+
+    // From trait
+    #[test]
+    fn test_from_unit() {
+        let v: Value = ().into();
+        assert_eq!(v, Value::Unit);
+    }
+
+    #[test]
+    fn test_from_bool() {
+        let v: Value = true.into();
+        assert_eq!(v, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_from_integers() {
+        assert_eq!(Value::from(42i64), Value::I64(42));
+        assert_eq!(Value::from(42i32), Value::I32(42));
+        assert_eq!(Value::from(42u64), Value::U64(42));
+    }
+
+    #[test]
+    fn test_from_floats() {
+        assert_eq!(Value::from(1.5f64), Value::F64(1.5));
+        assert_eq!(Value::from(2.5f32), Value::F32(2.5));
+    }
+
+    #[test]
+    fn test_from_string() {
+        let v: Value = "hello".into();
+        assert_eq!(v, Value::string("hello"));
+    }
+
+    #[test]
+    fn test_from_vec() {
+        let v: Value = vec![1i64, 2i64, 3i64].into();
+        match v {
+            Value::Vec(items) => assert_eq!(items.len(), 3),
+            _ => panic!("Expected Vec"),
+        }
+    }
+
+    #[test]
+    fn test_from_option() {
+        let v: Value = Some(42i64).into();
+        match v {
+            Value::Option(opt) => assert!(opt.is_some()),
+            _ => panic!("Expected Option"),
+        }
+    }
+
+    #[test]
+    fn test_from_result() {
+        let v: Value = Ok::<i64, String>(42).into();
+        match v {
+            Value::Result(res) => assert!(res.is_ok()),
+            _ => panic!("Expected Result"),
+        }
+    }
+}

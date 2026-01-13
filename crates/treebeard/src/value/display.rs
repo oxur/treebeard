@@ -159,3 +159,108 @@ impl fmt::Display for Value {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_debug_unit() {
+        assert_eq!(format!("{:?}", Value::Unit), "()");
+    }
+
+    #[test]
+    fn test_debug_bool() {
+        assert_eq!(format!("{:?}", Value::Bool(true)), "true");
+        assert_eq!(format!("{:?}", Value::Bool(false)), "false");
+    }
+
+    #[test]
+    fn test_debug_char() {
+        assert_eq!(format!("{:?}", Value::Char('a')), "'a'");
+    }
+
+    #[test]
+    fn test_debug_integers() {
+        assert_eq!(format!("{:?}", Value::I8(42)), "42i8");
+        assert_eq!(format!("{:?}", Value::I16(42)), "42i16");
+        assert_eq!(format!("{:?}", Value::I32(42)), "42i32");
+        assert_eq!(format!("{:?}", Value::I64(42)), "42");
+        assert_eq!(format!("{:?}", Value::U8(42)), "42u8");
+        assert_eq!(format!("{:?}", Value::U32(42)), "42u32");
+    }
+
+    #[test]
+    fn test_debug_floats() {
+        assert_eq!(format!("{:?}", Value::F32(1.5)), "1.5f32");
+        assert_eq!(format!("{:?}", Value::F64(2.5)), "2.5");
+    }
+
+    #[test]
+    fn test_debug_string() {
+        assert_eq!(format!("{:?}", Value::string("hello")), "\"hello\"");
+    }
+
+    #[test]
+    fn test_debug_vec() {
+        let v = Value::Vec(Arc::new(vec![Value::I64(1), Value::I64(2)]));
+        assert_eq!(format!("{:?}", v), "vec![1, 2]");
+    }
+
+    #[test]
+    fn test_debug_tuple() {
+        let t = Value::Tuple(Arc::new(vec![Value::I64(1), Value::string("hi")]));
+        let formatted = format!("{:?}", t);
+        assert!(formatted.contains("1"));
+        assert!(formatted.contains("hi"));
+    }
+
+    #[test]
+    fn test_debug_option_some() {
+        let opt = Value::Option(Arc::new(Some(Value::I64(42))));
+        let formatted = format!("{:?}", opt);
+        assert!(formatted.contains("Some"));
+        assert!(formatted.contains("42"));
+    }
+
+    #[test]
+    fn test_debug_option_none() {
+        let opt = Value::Option(Arc::new(None));
+        assert_eq!(format!("{:?}", opt), "None");
+    }
+
+    #[test]
+    fn test_debug_result_ok() {
+        let res = Value::Result(Arc::new(Ok(Value::I64(42))));
+        let formatted = format!("{:?}", res);
+        assert!(formatted.contains("Ok"));
+        assert!(formatted.contains("42"));
+    }
+
+    #[test]
+    fn test_debug_result_err() {
+        let res = Value::Result(Arc::new(Err(Value::string("error"))));
+        let formatted = format!("{:?}", res);
+        assert!(formatted.contains("Err"));
+        assert!(formatted.contains("error"));
+    }
+
+    #[test]
+    fn test_display_string() {
+        // Display doesn't include quotes
+        assert_eq!(format!("{}", Value::string("hello")), "hello");
+    }
+
+    #[test]
+    fn test_display_char() {
+        // Display doesn't include quotes
+        assert_eq!(format!("{}", Value::Char('a')), "a");
+    }
+
+    #[test]
+    fn test_display_integer() {
+        // Display falls back to Debug for non-string/char types
+        assert_eq!(format!("{}", Value::I64(42)), "42");
+    }
+}

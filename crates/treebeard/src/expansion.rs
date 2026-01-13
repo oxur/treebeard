@@ -385,13 +385,9 @@ mod tests {
         env.define_macro(macro_def);
 
         let ctx = ExpansionContext::default();
-        let result = expand_macro_invocation(
-            "make_list",
-            &[Value::I64(1), Value::I64(2)],
-            &env,
-            &ctx,
-        )
-        .unwrap();
+        let result =
+            expand_macro_invocation("make_list", &[Value::I64(1), Value::I64(2)], &env, &ctx)
+                .unwrap();
 
         match result {
             Value::Vec(v) => {
@@ -435,7 +431,10 @@ mod tests {
 
         assert!(result.is_err());
         match result {
-            Err(ExpansionError::ExpansionFailed { macro_name, message }) => {
+            Err(ExpansionError::ExpansionFailed {
+                macro_name,
+                message,
+            }) => {
                 assert_eq!(macro_name, "fail");
                 assert!(message.contains("always fails"));
             }
@@ -446,11 +445,7 @@ mod tests {
     #[test]
     fn test_is_macro() {
         let mut env = MacroEnvironment::new();
-        env.define_user_macro(
-            "test",
-            vec![],
-            Arc::new(|_| Ok(Value::Unit)),
-        );
+        env.define_user_macro("test", vec![], Arc::new(|_| Ok(Value::Unit)));
 
         assert!(is_macro("test", &env));
         assert!(!is_macro("nonexistent", &env));

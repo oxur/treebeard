@@ -374,3 +374,170 @@ pub fn type_name(value: &crate::Value) -> &'static str {
         crate::Value::RefMut(_) => "&mut T",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Value;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_treebeard_error_type_error_display() {
+        let err = TreebeardError::TypeError {
+            expected: "i64".to_string(),
+            got: "String".to_string(),
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("Type error"));
+        assert!(msg.contains("i64"));
+        assert!(msg.contains("String"));
+    }
+
+    #[test]
+    fn test_treebeard_error_value_error_display() {
+        let err = TreebeardError::ValueError("invalid value".to_string());
+        let msg = format!("{}", err);
+        assert!(msg.contains("Value error"));
+        assert!(msg.contains("invalid value"));
+    }
+
+    #[test]
+    fn test_treebeard_error_not_implemented_display() {
+        let err = TreebeardError::NotImplemented("feature X".to_string());
+        let msg = format!("{}", err);
+        assert!(msg.contains("Not implemented"));
+        assert!(msg.contains("feature X"));
+    }
+
+    #[test]
+    fn test_environment_error_undefined_variable() {
+        let err = EnvironmentError::UndefinedVariable {
+            name: "foo".to_string(),
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("undefined variable"));
+        assert!(msg.contains("foo"));
+    }
+
+    #[test]
+    fn test_environment_error_immutable_binding() {
+        let err = EnvironmentError::ImmutableBinding {
+            name: "x".to_string(),
+            span: None,
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("cannot assign"));
+        assert!(msg.contains("immutable"));
+        assert!(msg.contains("x"));
+    }
+
+    #[test]
+    fn test_environment_error_stack_overflow() {
+        let err = EnvironmentError::StackOverflow {
+            depth: 1001,
+            max: 1000,
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("stack overflow"));
+        assert!(msg.contains("1001"));
+        assert!(msg.contains("1000"));
+    }
+
+    #[test]
+    fn test_environment_error_constant_redefinition() {
+        let err = EnvironmentError::ConstantRedefinition {
+            name: "MAX".to_string(),
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("cannot redefine"));
+        assert!(msg.contains("constant"));
+        assert!(msg.contains("MAX"));
+    }
+
+    #[test]
+    fn test_eval_error_span_extraction() {
+        // Test errors with span = None
+        assert!(EvalError::Interrupted.span().is_none());
+        assert!(EvalError::StackOverflow { max: 100 }.span().is_none());
+
+        // Test error with span = Some
+        let span = proc_macro2::Span::call_site();
+        let err = EvalError::TypeError {
+            message: "test".to_string(),
+            span: Some(span),
+        };
+        assert!(err.span().is_some());
+    }
+
+    #[test]
+    fn test_eval_error_is_control_flow() {
+        use crate::eval::control::ControlFlow;
+
+        let cf_err = EvalError::ControlFlow(ControlFlow::break_unit());
+        assert!(cf_err.is_control_flow());
+
+        let other_err = EvalError::Interrupted;
+        assert!(!other_err.is_control_flow());
+    }
+
+    #[test]
+    fn test_eval_error_into_control_flow() {
+        use crate::eval::control::ControlFlow;
+
+        let cf = ControlFlow::break_unit();
+        let err = EvalError::ControlFlow(cf);
+        let extracted = err.into_control_flow();
+        assert!(extracted.is_some());
+
+        let other_err = EvalError::Interrupted;
+        assert!(other_err.into_control_flow().is_none());
+    }
+
+    #[test]
+    fn test_type_name_primitives() {
+        assert_eq!(type_name(&Value::Unit), "()");
+        assert_eq!(type_name(&Value::Bool(true)), "bool");
+        assert_eq!(type_name(&Value::Char('a')), "char");
+        assert_eq!(type_name(&Value::I8(1)), "i8");
+        assert_eq!(type_name(&Value::I16(1)), "i16");
+        assert_eq!(type_name(&Value::I32(1)), "i32");
+        assert_eq!(type_name(&Value::I64(1)), "i64");
+        assert_eq!(type_name(&Value::I128(1)), "i128");
+        assert_eq!(type_name(&Value::Isize(1)), "isize");
+        assert_eq!(type_name(&Value::U8(1)), "u8");
+        assert_eq!(type_name(&Value::U16(1)), "u16");
+        assert_eq!(type_name(&Value::U32(1)), "u32");
+        assert_eq!(type_name(&Value::U64(1)), "u64");
+        assert_eq!(type_name(&Value::U128(1)), "u128");
+        assert_eq!(type_name(&Value::Usize(1)), "usize");
+        assert_eq!(type_name(&Value::F32(1.0)), "f32");
+        assert_eq!(type_name(&Value::F64(1.0)), "f64");
+    }
+
+    #[test]
+    fn test_type_name_collections() {
+        assert_eq!(type_name(&Value::string("hi")), "String");
+        assert_eq!(type_name(&Value::Vec(Arc::new(vec![]))), "Vec");
+        assert_eq!(type_name(&Value::Tuple(Arc::new(vec![]))), "tuple");
+        assert_eq!(type_name(&Value::Array(Arc::new(vec![]))), "array");
+    }
+
+    #[test]
+    fn test_eval_error_display_messages() {
+        // Test various error display implementations
+        let err = EvalError::DivisionByZero { span: None };
+        assert!(format!("{}", err).contains("division by zero"));
+
+        let err = EvalError::IntegerOverflow { span: None };
+        assert!(format!("{}", err).contains("integer overflow"));
+
+        let err = EvalError::BreakOutsideLoop { span: None };
+        assert!(format!("{}", err).contains("break"));
+
+        let err = EvalError::ContinueOutsideLoop { span: None };
+        assert!(format!("{}", err).contains("continue"));
+
+        let err = EvalError::ReturnOutsideFunction { span: None };
+        assert!(format!("{}", err).contains("return"));
+    }
+}

@@ -174,3 +174,68 @@ pub fn eval_expr(
 pub use control::ControlFlow;
 pub use pattern::{apply_bindings, match_pattern};
 pub use stmt::{eval_block, eval_block_stmts, eval_stmt};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eval_expr_literal() {
+        let expr: syn::Expr = syn::parse_quote!(42);
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_expr(&expr, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_eval_expr_binary() {
+        let expr: syn::Expr = syn::parse_quote!(1 + 2);
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_expr(&expr, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(3));
+    }
+
+    #[test]
+    fn test_eval_expr_paren() {
+        let expr: syn::Expr = syn::parse_quote!((42));
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_expr(&expr, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_eval_expr_group() {
+        let expr: syn::Expr = syn::parse_quote!({ 1 + 2 });
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = eval_expr(&expr, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(3));
+    }
+
+    #[test]
+    fn test_expr_kind_name() {
+        let lit: syn::Expr = syn::parse_quote!(42);
+        assert_eq!(expr_kind_name(&lit), "literal");
+
+        let bin: syn::Expr = syn::parse_quote!(1 + 2);
+        assert_eq!(expr_kind_name(&bin), "binary operation");
+
+        let call: syn::Expr = syn::parse_quote!(foo());
+        assert_eq!(expr_kind_name(&call), "function call");
+    }
+
+    #[test]
+    fn test_not_yet_implemented() {
+        let expr: syn::Expr = syn::parse_quote!(async {});
+        let err = not_yet_implemented("async block", &expr);
+        match err {
+            EvalError::UnsupportedExpr { kind, .. } => {
+                assert!(kind.contains("not yet implemented"));
+            }
+            _ => panic!("Expected UnsupportedExpr"),
+        }
+    }
+}

@@ -55,3 +55,148 @@ impl Evaluate for syn::ExprMatch {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_match_literal_first_arm() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 1 {
+                1 => 100,
+                2 => 200,
+                _ => 0,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+
+        assert_eq!(result, Value::I64(100));
+    }
+
+    #[test]
+    fn test_match_literal_second_arm() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 2 {
+                1 => 100,
+                2 => 200,
+                _ => 0,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+
+        assert_eq!(result, Value::I64(200));
+    }
+
+    #[test]
+    fn test_match_wildcard() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 99 {
+                1 => 100,
+                2 => 200,
+                _ => 0,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+
+        assert_eq!(result, Value::I64(0));
+    }
+
+    #[test]
+    fn test_match_with_guard_true() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 5 {
+                x if x > 3 => 100,
+                _ => 0,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+
+        assert_eq!(result, Value::I64(100));
+    }
+
+    #[test]
+    fn test_match_with_guard_false() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 2 {
+                x if x > 3 => 100,
+                _ => 0,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+
+        assert_eq!(result, Value::I64(0));
+    }
+
+    #[test]
+    fn test_match_guard_non_bool() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 5 {
+                x if x => 100,
+                _ => 0,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EvalError::TypeError { message, .. } => {
+                assert!(message.contains("expected `bool` in match guard"));
+            }
+            _ => panic!("Expected TypeError"),
+        }
+    }
+
+    #[test]
+    fn test_match_non_exhaustive() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 3 {
+                1 => 100,
+                2 => 200,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EvalError::NonExhaustiveMatch { .. } => {}
+            _ => panic!("Expected NonExhaustiveMatch"),
+        }
+    }
+
+    #[test]
+    fn test_match_variable_binding() {
+        let expr: syn::ExprMatch = syn::parse_quote! {
+            match 42 {
+                x => x + 1,
+            }
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+        let result = expr.eval(&mut env, &ctx).unwrap();
+
+        assert_eq!(result, Value::I64(43));
+    }
+}
