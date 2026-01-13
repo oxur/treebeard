@@ -28,6 +28,13 @@ use indexmap::IndexMap;
 use std::fmt;
 use std::sync::Arc;
 
+/// Type alias for native macro transformation functions.
+pub type NativeMacroFn = Arc<dyn Fn(&[syn::Item]) -> Result<Vec<syn::Item>, String> + Send + Sync>;
+
+/// Type alias for user-defined macro transformation functions.
+pub type UserDefinedMacroFn =
+    Arc<dyn Fn(&[crate::Value]) -> Result<crate::Value, String> + Send + Sync>;
+
 /// A macro definition stored in the macro environment.
 ///
 /// Macros are functions that transform AST at compile-time. They take
@@ -81,7 +88,7 @@ impl fmt::Debug for MacroDefinition {
 #[derive(Clone)]
 pub enum MacroBody {
     /// Native Rust function (for built-in macros)
-    Native(Arc<dyn Fn(&[syn::Item]) -> Result<Vec<syn::Item>, String> + Send + Sync>),
+    Native(NativeMacroFn),
 
     /// Template-based (quasiquote) - Stage 3.2
     ///
@@ -93,7 +100,7 @@ pub enum MacroBody {
     ///
     /// Stores a user-defined macro function that transforms AST at expansion time.
     /// The function takes arguments (as Values) and returns a Template or AST Value.
-    UserDefined(Arc<dyn Fn(&[crate::Value]) -> Result<crate::Value, String> + Send + Sync>),
+    UserDefined(UserDefinedMacroFn),
 }
 
 impl fmt::Debug for MacroBody {
@@ -186,6 +193,9 @@ impl MacroEnvironment {
     /// ```
     pub fn define_macro(&mut self, macro_def: MacroDefinition) {
         let name = macro_def.name.clone();
+        // ALLOW: MacroDefinition contains closures marked as Send + Sync,
+        // but clippy can't verify this automatically
+        #[allow(clippy::arc_with_non_send_sync)]
         self.macros.insert(name, Arc::new(macro_def));
     }
 
@@ -320,7 +330,7 @@ impl MacroEnvironment {
         &mut self,
         name: impl Into<String>,
         params: Vec<String>,
-        func: Arc<dyn Fn(&[crate::Value]) -> Result<crate::Value, String> + Send + Sync>,
+        func: UserDefinedMacroFn,
     ) {
         let name_string = name.into();
         let body = MacroBody::UserDefined(func);

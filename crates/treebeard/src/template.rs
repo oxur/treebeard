@@ -184,6 +184,9 @@ impl TemplateNode {
 
     /// Create an item template node.
     pub fn item(item: syn::Item) -> Self {
+        // ALLOW: syn::Item is Send + Sync (it's just AST data),
+        // but clippy can't verify this automatically
+        #[allow(clippy::arc_with_non_send_sync)]
         TemplateNode::Item(Arc::new(item))
     }
 

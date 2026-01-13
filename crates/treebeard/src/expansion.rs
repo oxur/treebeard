@@ -156,15 +156,16 @@ pub struct ExpansionContext {
     config: ExpansionConfig,
 }
 
+impl Default for ExpansionContext {
+    fn default() -> Self {
+        Self::new(ExpansionConfig::default())
+    }
+}
+
 impl ExpansionContext {
     /// Create a new expansion context with the given config.
     pub fn new(config: ExpansionConfig) -> Self {
         Self { depth: 0, config }
-    }
-
-    /// Create a context with default configuration.
-    pub fn default() -> Self {
-        Self::new(ExpansionConfig::default())
     }
 
     /// Create a nested context (increment depth).
