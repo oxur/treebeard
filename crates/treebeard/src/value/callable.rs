@@ -103,3 +103,57 @@ impl std::fmt::Debug for CompiledFn {
         write!(f, "CompiledFn({} @ {:?})", self.name, self.lib_path)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_function_value_new() {
+        let block: syn::Block = syn::parse_str("{ 42 }").unwrap();
+        let func = FunctionValue::new(
+            "test_fn".to_string(),
+            vec!["x".to_string(), "y".to_string()],
+            block,
+        );
+        assert_eq!(func.name, "test_fn");
+        assert_eq!(func.params.len(), 2);
+        assert_eq!(func.call_count, 0);
+    }
+
+    #[test]
+    fn test_builtin_fn_debug() {
+        let builtin = BuiltinFn {
+            name: "test_builtin".to_string(),
+            arity: 2,
+            func: Arc::new(|_| Ok(Value::Unit)),
+        };
+        let debug_str = format!("{:?}", builtin);
+        assert_eq!(debug_str, "BuiltinFn(test_builtin)");
+    }
+
+    #[test]
+    fn test_compiled_fn_debug() {
+        let compiled = CompiledFn {
+            name: "test_compiled".to_string(),
+            arity: 1,
+            lib_path: std::path::PathBuf::from("/path/to/lib.so"),
+            _marker: std::marker::PhantomData,
+        };
+        let debug_str = format!("{:?}", compiled);
+        assert!(debug_str.contains("CompiledFn"));
+        assert!(debug_str.contains("test_compiled"));
+    }
+
+    #[test]
+    fn test_closure_value_structure() {
+        let expr: syn::Expr = syn::parse_str("x + 1").unwrap();
+        let closure = ClosureValue {
+            params: vec!["x".to_string()],
+            body: Arc::new(expr),
+            captures: Arc::new(vec![("y".to_string(), Value::I64(42))]),
+        };
+        assert_eq!(closure.params.len(), 1);
+        assert_eq!(closure.captures.len(), 1);
+    }
+}

@@ -114,3 +114,93 @@ fn eval_deref(operand: Value, span: Option<proc_macro2::Span>) -> Result<Value, 
         }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_neg_i64() {
+        let result = eval_neg(Value::I64(42), None).unwrap();
+        assert_eq!(result, Value::I64(-42));
+    }
+
+    #[test]
+    fn test_neg_i32() {
+        let result = eval_neg(Value::I32(42), None).unwrap();
+        assert_eq!(result, Value::I32(-42));
+    }
+
+    #[test]
+    fn test_neg_f64() {
+        let result = eval_neg(Value::F64(3.14), None).unwrap();
+        assert_eq!(result, Value::F64(-3.14));
+    }
+
+    #[test]
+    fn test_neg_f32() {
+        let result = eval_neg(Value::F32(3.14), None).unwrap();
+        assert_eq!(result, Value::F32(-3.14));
+    }
+
+    #[test]
+    fn test_neg_unsigned_fails() {
+        let result = eval_neg(Value::U32(42), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::InvalidUnaryOperand { .. }
+        ));
+    }
+
+    #[test]
+    fn test_not_bool() {
+        let result = eval_not(Value::Bool(true), None).unwrap();
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_not_i32() {
+        let result = eval_not(Value::I32(0b1010), None).unwrap();
+        assert_eq!(result, Value::I32(!0b1010));
+    }
+
+    #[test]
+    fn test_not_u8() {
+        let result = eval_not(Value::U8(0b1010), None).unwrap();
+        assert_eq!(result, Value::U8(!0b1010));
+    }
+
+    #[test]
+    fn test_not_string_fails() {
+        let result = eval_not(Value::string("test"), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::InvalidUnaryOperand { .. }
+        ));
+    }
+
+    #[test]
+    fn test_deref_ref() {
+        use crate::value::ValueRef;
+        use std::sync::Arc;
+        let val = Value::I64(42);
+        let ref_val = Value::Ref(ValueRef {
+            value: Arc::new(val),
+            tag: 0,
+        });
+        let result = eval_deref(ref_val, None).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_deref_non_ref_fails() {
+        let result = eval_deref(Value::I64(42), None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::InvalidUnaryOperand { .. }
+        ));
+    }
+}

@@ -219,6 +219,62 @@ pub enum EvalError {
         span: Option<Span>,
     },
 
+    /// Invalid assignment target.
+    #[error("cannot assign to {kind}")]
+    InvalidAssignTarget {
+        /// Description of what was attempted
+        kind: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Index out of bounds.
+    #[error("index out of bounds: index {index} >= len {len}")]
+    IndexOutOfBounds {
+        /// Index that was accessed
+        index: usize,
+        /// Length of the collection
+        len: usize,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Key not found in map.
+    #[error("key not found: {key}")]
+    KeyNotFound {
+        /// Key that was not found
+        key: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Field not found on struct.
+    #[error("no field `{field}` on type `{type_name}`")]
+    UndefinedField {
+        /// Field name
+        field: String,
+        /// Type name
+        type_name: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Let-else didn't diverge.
+    #[error("let-else block must diverge (return, break, continue, or panic)")]
+    NonDivergingLetElse {
+        /// Source span
+        span: Option<Span>,
+    },
+
+    /// Parse error.
+    #[error("parse error: {message}")]
+    ParseError {
+        /// Error message
+        message: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
     /// Environment error wrapper
     #[error(transparent)]
     Environment(#[from] EnvironmentError),
@@ -246,6 +302,12 @@ impl EvalError {
             EvalError::RefutablePattern { span, .. } => *span,
             EvalError::ArityMismatch { span, .. } => *span,
             EvalError::BuiltinError { span, .. } => *span,
+            EvalError::InvalidAssignTarget { span, .. } => *span,
+            EvalError::IndexOutOfBounds { span, .. } => *span,
+            EvalError::KeyNotFound { span, .. } => *span,
+            EvalError::UndefinedField { span, .. } => *span,
+            EvalError::NonDivergingLetElse { span } => *span,
+            EvalError::ParseError { span, .. } => *span,
             EvalError::Environment(_) => None,
         }
     }

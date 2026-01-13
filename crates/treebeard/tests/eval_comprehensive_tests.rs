@@ -307,16 +307,19 @@ fn test_literal_float_edge_cases() {
 // All "Not Yet Implemented" Expression Types
 // ═══════════════════════════════════════════════════════════════════════
 
+// Arrays are now supported in Stage 1.6
 #[test]
-fn test_unsupported_array() {
+fn test_array() {
     let result = eval("[1, 2, 3]");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_ok());
 }
 
+// Assignment is now supported in Stage 1.6
+// But assignment to undefined variables still fails
 #[test]
-fn test_unsupported_assign() {
+fn test_assign_undefined() {
     let result = eval("x = 5");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_err());
 }
 
 #[test]
@@ -370,22 +373,25 @@ fn test_continue_outside_loop() {
     assert!(matches!(result, Err(EvalError::ContinueOutsideLoop { .. })));
 }
 
+// Field access is now supported in Stage 1.6
 #[test]
-fn test_unsupported_field_access() {
+fn test_field_access_undefined() {
     let result = eval("x.field");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_err()); // Undefined variable x
 }
 
+// For loops are now supported in Stage 1.4
 #[test]
-fn test_unsupported_for_loop() {
+fn test_for_loop() {
     let result = eval("for i in 0..10 { }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_ok());
 }
 
+// Index access is now supported in Stage 1.6
 #[test]
-fn test_unsupported_index() {
+fn test_index_undefined() {
     let result = eval("arr[0]");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_err()); // Undefined variable arr
 }
 
 #[test]
@@ -400,10 +406,11 @@ fn test_unsupported_macro() {
     assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
 }
 
+// Ranges are now supported in Stage 1.6
 #[test]
-fn test_unsupported_range() {
+fn test_range() {
     let result = eval("0..10");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -412,10 +419,11 @@ fn test_unsupported_reference() {
     assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
 }
 
+// Array repeat syntax is now supported in Stage 1.6
 #[test]
-fn test_unsupported_repeat() {
+fn test_repeat() {
     let result = eval("[0; 10]");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -428,10 +436,11 @@ fn test_unsupported_return() {
     ));
 }
 
+// Struct literals are now supported in Stage 1.6
 #[test]
-fn test_unsupported_struct_literal() {
+fn test_struct_literal() {
     let result = eval("Point { x: 1, y: 2 }");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -446,10 +455,11 @@ fn test_unsupported_try_block() {
     assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
 }
 
+// Tuples are now supported in Stage 1.6
 #[test]
-fn test_unsupported_tuple() {
+fn test_tuple() {
     let result = eval("(1, 2, 3)");
-    assert!(matches!(result, Err(EvalError::UnsupportedExpr { .. })));
+    assert!(result.is_ok());
 }
 
 #[test]

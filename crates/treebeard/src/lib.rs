@@ -35,7 +35,7 @@ pub mod value;
 pub use context::EvalContext;
 pub use environment::{Binding, BindingMode, Environment, ScopeGuard};
 pub use error::{EnvironmentError, EvalError, Result, TreebeardError};
-pub use eval::{eval_block, eval_expr, ControlFlow, Evaluate};
+pub use eval::{eval_block, eval_block_stmts, eval_expr, eval_stmt, ControlFlow, Evaluate};
 pub use value::{
     BuiltinFn, BuiltinFnPtr, ClosureValue, CompiledFn, EnumData, EnumValue, FunctionValue,
     HashableValue, StructValue, Value, ValueRef, ValueRefMut,

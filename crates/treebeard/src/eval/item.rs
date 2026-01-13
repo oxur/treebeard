@@ -241,4 +241,351 @@ mod tests {
         assert!(env.get("A").is_some());
         assert!(env.get("get_a").is_some());
     }
+
+    #[test]
+    fn test_eval_static_mut() {
+        let source = "static mut Z: i64 = 200;";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        let value = env.get("Z").unwrap();
+        assert_eq!(value, &Value::I64(200));
+    }
+
+    #[test]
+    fn test_eval_struct_item() {
+        let source = "struct Point { x: i64, y: i64 }";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_enum_item() {
+        let source = "enum Color { Red, Green, Blue }";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_type_alias() {
+        let source = "type MyInt = i64;";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_use_statement() {
+        let source = "use std::collections::HashMap;";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_impl_block() {
+        let source = r#"
+            impl Point {
+                fn new() -> i64 { 42 }
+            }
+        "#;
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        // Method should be registered
+        assert!(env.get("new").is_some());
+    }
+
+    #[test]
+    fn test_eval_impl_block_with_self() {
+        let source = r#"
+            impl Point {
+                fn get_x(&self) -> i64 { 10 }
+            }
+        "#;
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        assert!(env.get("get_x").is_some());
+    }
+
+    #[test]
+    fn test_eval_module_unsupported() {
+        let source = "mod my_module {}";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::UnsupportedExpr { .. }
+        ));
+    }
+
+    #[test]
+    fn test_eval_trait_unsupported() {
+        let source = "trait MyTrait {}";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::UnsupportedExpr { .. }
+        ));
+    }
+
+    #[test]
+    fn test_extract_method_params_with_reference() {
+        let sig: syn::Signature = syn::parse_str("fn test(&x: &i64)").unwrap();
+        let params = extract_method_params(&sig).unwrap();
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0], "x");
+    }
+
+    #[test]
+    fn test_extract_method_params_with_wildcard() {
+        let sig: syn::Signature = syn::parse_str("fn test(_: i64)").unwrap();
+        let params = extract_method_params(&sig).unwrap();
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0], "_");
+    }
+
+    #[test]
+    fn test_extract_method_params_no_params() {
+        let sig: syn::Signature = syn::parse_str("fn test()").unwrap();
+        let params = extract_method_params(&sig).unwrap();
+        assert_eq!(params.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_method_params_with_self() {
+        let sig: syn::Signature = syn::parse_str("fn test(&self, x: i64)").unwrap();
+        let params = extract_method_params(&sig).unwrap();
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0], "self");
+        assert_eq!(params[1], "x");
+    }
+
+    #[test]
+    fn test_extract_method_params_multiple() {
+        let sig: syn::Signature = syn::parse_str("fn test(a: i64, b: i64, c: i64)").unwrap();
+        let params = extract_method_params(&sig).unwrap();
+        assert_eq!(params.len(), 3);
+        assert_eq!(params[0], "a");
+        assert_eq!(params[1], "b");
+        assert_eq!(params[2], "c");
+    }
+
+    #[test]
+    fn test_eval_items_multiple() {
+        let items_str = vec![
+            "const X: i64 = 1;",
+            "const Y: i64 = 2;",
+            "const Z: i64 = 3;",
+        ];
+        let items: Vec<syn::Item> = items_str
+            .iter()
+            .map(|s| syn::parse_str(s).unwrap())
+            .collect();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_items(&items, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        assert_eq!(env.get("X"), Some(&Value::I64(1)));
+        assert_eq!(env.get("Y"), Some(&Value::I64(2)));
+        assert_eq!(env.get("Z"), Some(&Value::I64(3)));
+    }
+
+    #[test]
+    fn test_function_from_impl_method_basic() {
+        let source = r#"
+            impl Point {
+                fn test() -> i64 { 42 }
+            }
+        "#;
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        if let syn::Item::Impl(impl_item) = item {
+            if let syn::ImplItem::Fn(method) = &impl_item.items[0] {
+                let func = function_from_impl_method(method, &impl_item.self_ty).unwrap();
+                assert_eq!(func.name, "test");
+                assert_eq!(func.params.len(), 0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_extract_pat_name_with_type() {
+        let sig: syn::Signature = syn::parse_str("fn test(x: i64)").unwrap();
+        if let syn::FnArg::Typed(pat_type) = &sig.inputs[0] {
+            let name = extract_pat_name(&pat_type.pat).unwrap();
+            assert_eq!(name, "x");
+        } else {
+            panic!("Expected typed argument");
+        }
+    }
+
+    #[test]
+    fn test_extract_pat_name_error_on_complex_pattern() {
+        let stmt: syn::Stmt = syn::parse_str("let (a, b) = (1, 2);").unwrap();
+        if let syn::Stmt::Local(local) = stmt {
+            let result = extract_pat_name(&local.pat);
+            assert!(result.is_err());
+            assert!(matches!(
+                result.unwrap_err(),
+                EvalError::UnsupportedExpr { .. }
+            ));
+        } else {
+            panic!("Expected Local statement");
+        }
+    }
+
+    #[test]
+    fn test_eval_impl_block_multiple_methods() {
+        let source = r#"
+            impl MyType {
+                fn method1() -> i64 { 1 }
+                fn method2() -> i64 { 2 }
+                fn method3() -> i64 { 3 }
+            }
+        "#;
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        // All methods should be registered
+        assert!(env.get("method1").is_some());
+        assert!(env.get("method2").is_some());
+        assert!(env.get("method3").is_some());
+    }
+
+    #[test]
+    fn test_eval_impl_block_empty() {
+        let source = "impl Point {}";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_const_with_expression() {
+        let source = "const SUM: i64 = 10 + 20;";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        let value = env.get("SUM").unwrap();
+        assert_eq!(value, &Value::I64(30));
+    }
+
+    #[test]
+    fn test_eval_static_with_expression() {
+        let source = "static PRODUCT: i64 = 5 * 6;";
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_item(&item, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+
+        let value = env.get("PRODUCT").unwrap();
+        assert_eq!(value, &Value::I64(30));
+    }
+
+    #[test]
+    fn test_eval_items_empty() {
+        let items: Vec<syn::Item> = vec![];
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_items(&items, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_extract_method_params_with_typed_pattern() {
+        let sig: syn::Signature = syn::parse_str("fn test(x: i64, y: i64)").unwrap();
+        let params = extract_method_params(&sig).unwrap();
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0], "x");
+        assert_eq!(params[1], "y");
+    }
+
+    #[test]
+    fn test_function_from_impl_method_with_params() {
+        let source = r#"
+            impl Point {
+                fn set(&mut self, x: i64, y: i64) -> i64 { x + y }
+            }
+        "#;
+        let item: syn::Item = syn::parse_str(source).unwrap();
+
+        if let syn::Item::Impl(impl_item) = item {
+            if let syn::ImplItem::Fn(method) = &impl_item.items[0] {
+                let func = function_from_impl_method(method, &impl_item.self_ty).unwrap();
+                assert_eq!(func.name, "set");
+                assert_eq!(func.params.len(), 3); // self, x, y
+                assert_eq!(func.params[0], "self");
+                assert_eq!(func.params[1], "x");
+                assert_eq!(func.params[2], "y");
+            }
+        }
+    }
 }

@@ -144,3 +144,162 @@ fn eval_float_literal(lit: &syn::LitFloat) -> Result<Value, EvalError> {
 fn overflow_error(span: Option<proc_macro2::Span>) -> EvalError {
     EvalError::IntegerOverflow { span }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_literal() {
+        let lit: syn::Lit = syn::parse_str(r#""hello""#).unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::string("hello"));
+    }
+
+    #[test]
+    fn test_byte_string_literal() {
+        let lit: syn::Lit = syn::parse_str(r#"b"hello""#).unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::bytes(b"hello".to_vec()));
+    }
+
+    #[test]
+    fn test_byte_literal() {
+        let lit: syn::Lit = syn::parse_str("b'A'").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::U8(65));
+    }
+
+    #[test]
+    fn test_char_literal() {
+        let lit: syn::Lit = syn::parse_str("'x'").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::Char('x'));
+    }
+
+    #[test]
+    fn test_bool_literal_true() {
+        let lit: syn::Lit = syn::parse_str("true").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_bool_literal_false() {
+        let lit: syn::Lit = syn::parse_str("false").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_int_literal_no_suffix() {
+        let lit: syn::Lit = syn::parse_str("42").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_int_literal_i8() {
+        let lit: syn::Lit = syn::parse_str("42i8").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::I8(42));
+    }
+
+    #[test]
+    fn test_int_literal_i16() {
+        let lit: syn::Lit = syn::parse_str("42i16").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::I16(42));
+    }
+
+    #[test]
+    fn test_int_literal_i32() {
+        let lit: syn::Lit = syn::parse_str("42i32").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::I32(42));
+    }
+
+    #[test]
+    fn test_int_literal_i64() {
+        let lit: syn::Lit = syn::parse_str("42i64").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_int_literal_i128() {
+        let lit: syn::Lit = syn::parse_str("42i128").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::I128(42));
+    }
+
+    #[test]
+    fn test_int_literal_isize() {
+        let lit: syn::Lit = syn::parse_str("42isize").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::Isize(42));
+    }
+
+    #[test]
+    fn test_int_literal_u8() {
+        let lit: syn::Lit = syn::parse_str("42u8").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::U8(42));
+    }
+
+    #[test]
+    fn test_int_literal_u16() {
+        let lit: syn::Lit = syn::parse_str("42u16").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::U16(42));
+    }
+
+    #[test]
+    fn test_int_literal_u32() {
+        let lit: syn::Lit = syn::parse_str("42u32").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::U32(42));
+    }
+
+    #[test]
+    fn test_int_literal_u64() {
+        let lit: syn::Lit = syn::parse_str("42u64").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::U64(42));
+    }
+
+    #[test]
+    fn test_int_literal_u128() {
+        let lit: syn::Lit = syn::parse_str("42u128").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::U128(42));
+    }
+
+    #[test]
+    fn test_int_literal_usize() {
+        let lit: syn::Lit = syn::parse_str("42usize").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::Usize(42));
+    }
+
+    #[test]
+    fn test_float_literal_no_suffix() {
+        let lit: syn::Lit = syn::parse_str("3.14").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::F64(3.14));
+    }
+
+    #[test]
+    fn test_float_literal_f32() {
+        let lit: syn::Lit = syn::parse_str("3.14f32").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::F32(3.14));
+    }
+
+    #[test]
+    fn test_float_literal_f64() {
+        let lit: syn::Lit = syn::parse_str("3.14f64").unwrap();
+        let result = eval_lit(&lit).unwrap();
+        assert_eq!(result, Value::F64(3.14));
+    }
+}

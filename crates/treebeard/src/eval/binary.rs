@@ -15,6 +15,11 @@ impl Evaluate for syn::ExprBinary {
             _ => {}
         }
 
+        // Handle compound assignment operators by desugaring: x += y  →  x = x + y
+        if is_assignment_op(&self.op) {
+            return eval_compound_assignment(self, env, ctx);
+        }
+
         // Evaluate both operands
         let left = self.left.eval(env, ctx)?;
         let right = self.right.eval(env, ctx)?;
@@ -46,7 +51,7 @@ impl Evaluate for syn::ExprBinary {
             // Logical (already handled above with short-circuit)
             syn::BinOp::And(_) | syn::BinOp::Or(_) => unreachable!(),
 
-            // Assignment operators (not handled in this stage)
+            // Assignment operators already handled above
             syn::BinOp::AddAssign(_)
             | syn::BinOp::SubAssign(_)
             | syn::BinOp::MulAssign(_)
@@ -56,16 +61,75 @@ impl Evaluate for syn::ExprBinary {
             | syn::BinOp::BitOrAssign(_)
             | syn::BinOp::BitXorAssign(_)
             | syn::BinOp::ShlAssign(_)
-            | syn::BinOp::ShrAssign(_) => Err(EvalError::UnsupportedExpr {
-                kind: "assignment operator (not yet implemented)".to_string(),
-                span,
-            }),
+            | syn::BinOp::ShrAssign(_) => unreachable!(),
 
             _ => Err(EvalError::UnsupportedExpr {
                 kind: "unknown binary operator".to_string(),
                 span,
             }),
         }
+    }
+}
+
+/// Check if a binary operator is a compound assignment operator.
+fn is_assignment_op(op: &syn::BinOp) -> bool {
+    matches!(
+        op,
+        syn::BinOp::AddAssign(_)
+            | syn::BinOp::SubAssign(_)
+            | syn::BinOp::MulAssign(_)
+            | syn::BinOp::DivAssign(_)
+            | syn::BinOp::RemAssign(_)
+            | syn::BinOp::BitAndAssign(_)
+            | syn::BinOp::BitOrAssign(_)
+            | syn::BinOp::BitXorAssign(_)
+            | syn::BinOp::ShlAssign(_)
+            | syn::BinOp::ShrAssign(_)
+    )
+}
+
+/// Evaluate a compound assignment expression by desugaring it.
+///
+/// Converts `x += y` to `x = x + y` and similar for other operators.
+fn eval_compound_assignment(
+    binary: &syn::ExprBinary,
+    env: &mut Environment,
+    ctx: &EvalContext,
+) -> Result<Value, EvalError> {
+    // Get the current value of the left side
+    let left_val = binary.left.eval(env, ctx)?;
+
+    // Evaluate the right side
+    let right_val = binary.right.eval(env, ctx)?;
+
+    let span = Some(binary.op.span());
+
+    // Apply the underlying operation
+    let new_val = match &binary.op {
+        syn::BinOp::AddAssign(_) => eval_add(left_val, right_val, span)?,
+        syn::BinOp::SubAssign(_) => eval_sub(left_val, right_val, span)?,
+        syn::BinOp::MulAssign(_) => eval_mul(left_val, right_val, span)?,
+        syn::BinOp::DivAssign(_) => eval_div(left_val, right_val, span)?,
+        syn::BinOp::RemAssign(_) => eval_rem(left_val, right_val, span)?,
+        syn::BinOp::BitAndAssign(_) => eval_bitand(left_val, right_val, span)?,
+        syn::BinOp::BitOrAssign(_) => eval_bitor(left_val, right_val, span)?,
+        syn::BinOp::BitXorAssign(_) => eval_bitxor(left_val, right_val, span)?,
+        syn::BinOp::ShlAssign(_) => eval_shl(left_val, right_val, span)?,
+        syn::BinOp::ShrAssign(_) => eval_shr(left_val, right_val, span)?,
+        _ => unreachable!(),
+    };
+
+    // Assign the new value back
+    // For simple variable assignments only (complex lvalues not yet supported)
+    if let syn::Expr::Path(path) = binary.left.as_ref() {
+        let name = super::path::path_to_string(&path.path);
+        env.assign(&name, new_val).map_err(EvalError::from)?;
+        Ok(Value::Unit)
+    } else {
+        Err(EvalError::InvalidAssignTarget {
+            kind: "compound assignment to complex lvalue (not yet supported)".to_string(),
+            span,
+        })
     }
 }
 

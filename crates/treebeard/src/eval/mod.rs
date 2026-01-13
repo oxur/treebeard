@@ -1,10 +1,14 @@
 //! Expression evaluation
 
+pub mod array;
+pub mod assign;
 pub mod binary;
 pub mod call;
 pub mod control;
+pub mod field;
 pub mod function;
 pub mod if_expr;
+pub mod index;
 pub mod item;
 pub mod literal;
 pub mod local;
@@ -12,7 +16,11 @@ pub mod loops;
 pub mod match_expr;
 pub mod path;
 pub mod pattern;
+pub mod range;
 pub mod return_expr;
+pub mod stmt;
+pub mod struct_lit;
+pub mod tuple;
 pub mod unary;
 
 use crate::{Environment, EvalContext, EvalError, Value};
@@ -59,8 +67,16 @@ impl Evaluate for syn::Expr {
             syn::Expr::Return(expr) => expr.eval(env, ctx),
             syn::Expr::Closure(_) => Err(not_yet_implemented("closure", self)),
 
-            // Stage 1.6: Blocks
-            syn::Expr::Block(expr) => if_expr::eval_block(&expr.block, env, ctx),
+            // Stage 1.6: Statements & Blocks
+            syn::Expr::Block(expr) => stmt::eval_block(&expr.block, env, ctx),
+            syn::Expr::Assign(expr) => assign::eval_assign(expr, env, ctx),
+            syn::Expr::Index(expr) => index::eval_index(expr, env, ctx),
+            syn::Expr::Field(expr) => field::eval_field(expr, env, ctx),
+            syn::Expr::Tuple(expr) => tuple::eval_tuple(expr, env, ctx),
+            syn::Expr::Array(expr) => array::eval_array(expr, env, ctx),
+            syn::Expr::Repeat(expr) => array::eval_array_repeat(expr, env, ctx),
+            syn::Expr::Struct(expr) => struct_lit::eval_struct(expr, env, ctx),
+            syn::Expr::Range(expr) => range::eval_range(expr, env, ctx),
 
             // Parenthesized expressions - just unwrap
             syn::Expr::Paren(expr) => expr.expr.eval(env, ctx),
@@ -156,5 +172,5 @@ pub fn eval_expr(
 
 // Re-export for use by other modules
 pub use control::ControlFlow;
-pub use if_expr::eval_block;
 pub use pattern::{apply_bindings, match_pattern};
+pub use stmt::{eval_block, eval_block_stmts, eval_stmt};

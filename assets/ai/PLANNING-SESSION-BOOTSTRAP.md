@@ -12,12 +12,13 @@ Copy and paste this into a new Claude session:
 I'm working on Treebeard, a tree-walking interpreter for Rust's `syn` AST. I need help creating detailed implementation stage documents for Claude Code.
 
 I've uploaded:
-1. The main implementation guide (0001-treebeard-implementation-guide-v3.md) - architecture and design decisions
-2. The implementation stages doc (treebeard-implementation-stages.md) - breakdown of phases into stages
-3. The CLAUDE.md for the project - conventions and patterns
-4. A sample implementation guide you can use as a source of inspiration (this was the guide for phase 1, stage 1)
+1. The project README
+2. The main implementation guide (0001-treebeard-implementation-guide-v3.md) - architecture and design decisions
+3. The implementation stages doc (0005-treebeard-implementation-stages.md) - breakdown of phases into stages
+4. The CLAUDE.md for the project - conventions and patterns
+5. A sample implementation guide you can use as a source of inspiration (this was the guide for phase 1, stage 1)
 
-I need you to create a detailed implementation document for Stage [X.Y: Name].
+I need you to create a detailed implementation document for Stage [X.Y: Name] in .md format for easy download.
 
 The format should match the previous stage docs:
 - Objective and overview

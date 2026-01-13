@@ -503,4 +503,470 @@ mod tests {
         let result = try_builtin_method("clone", &[val.clone()]).unwrap();
         assert_eq!(result, Some(val));
     }
+
+    #[test]
+    fn test_string_chars() {
+        let result = try_builtin_method("chars", &[Value::string("hi")]).unwrap();
+        if let Some(Value::Vec(chars)) = result {
+            assert_eq!(chars.len(), 2);
+            assert_eq!(chars[0], Value::Char('h'));
+            assert_eq!(chars[1], Value::Char('i'));
+        } else {
+            panic!("Expected Some(Vec)");
+        }
+    }
+
+    #[test]
+    fn test_string_starts_with() {
+        let result = try_builtin_method(
+            "starts_with",
+            &[Value::string("hello"), Value::string("hel")],
+        )
+        .unwrap();
+        assert_eq!(result, Some(Value::Bool(true)));
+
+        let result = try_builtin_method(
+            "starts_with",
+            &[Value::string("hello"), Value::string("bye")],
+        )
+        .unwrap();
+        assert_eq!(result, Some(Value::Bool(false)));
+    }
+
+    #[test]
+    fn test_string_ends_with() {
+        let result =
+            try_builtin_method("ends_with", &[Value::string("hello"), Value::string("lo")])
+                .unwrap();
+        assert_eq!(result, Some(Value::Bool(true)));
+
+        let result =
+            try_builtin_method("ends_with", &[Value::string("hello"), Value::string("x")]).unwrap();
+        assert_eq!(result, Some(Value::Bool(false)));
+    }
+
+    #[test]
+    fn test_vec_is_empty() {
+        let empty = Value::vec(vec![]);
+        let result = try_builtin_method("is_empty", &[empty]).unwrap();
+        assert_eq!(result, Some(Value::Bool(true)));
+
+        let non_empty = Value::vec(vec![Value::I64(1)]);
+        let result = try_builtin_method("is_empty", &[non_empty]).unwrap();
+        assert_eq!(result, Some(Value::Bool(false)));
+    }
+
+    #[test]
+    fn test_vec_get() {
+        let v = Value::vec(vec![Value::I64(10), Value::I64(20), Value::I64(30)]);
+
+        // Valid index
+        let result = try_builtin_method("get", &[v.clone(), Value::Usize(1)]).unwrap();
+        if let Some(Value::Option(opt)) = result {
+            assert!(opt.is_some());
+            if let Some(val) = opt.as_ref() {
+                assert_eq!(val, &Value::I64(20));
+            }
+        } else {
+            panic!("Expected Some(Option)");
+        }
+
+        // Out of bounds
+        let result = try_builtin_method("get", &[v, Value::Usize(10)]).unwrap();
+        if let Some(Value::Option(opt)) = result {
+            assert!(opt.is_none());
+        } else {
+            panic!("Expected Some(Option)");
+        }
+    }
+
+    #[test]
+    fn test_vec_contains() {
+        let v = Value::vec(vec![Value::I64(1), Value::I64(2), Value::I64(3)]);
+
+        let result = try_builtin_method("contains", &[v.clone(), Value::I64(2)]).unwrap();
+        assert_eq!(result, Some(Value::Bool(true)));
+
+        let result = try_builtin_method("contains", &[v, Value::I64(99)]).unwrap();
+        assert_eq!(result, Some(Value::Bool(false)));
+    }
+
+    #[test]
+    fn test_array_methods() {
+        let arr = Value::array(vec![Value::I64(1), Value::I64(2)]);
+
+        let result = try_builtin_method("len", &[arr.clone()]).unwrap();
+        assert_eq!(result, Some(Value::Usize(2)));
+
+        let result = try_builtin_method("is_empty", &[arr.clone()]).unwrap();
+        assert_eq!(result, Some(Value::Bool(false)));
+
+        let result = try_builtin_method("first", &[arr.clone()]).unwrap();
+        assert!(matches!(result, Some(Value::Option(_))));
+
+        let result = try_builtin_method("last", &[arr]).unwrap();
+        assert!(matches!(result, Some(Value::Option(_))));
+    }
+
+    #[test]
+    fn test_option_unwrap_or() {
+        let some_val = Value::Option(Arc::new(Some(Value::I64(42))));
+        let result = try_builtin_method("unwrap_or", &[some_val, Value::I64(0)]).unwrap();
+        assert_eq!(result, Some(Value::I64(42)));
+
+        let none_val = Value::Option(Arc::new(None));
+        let result = try_builtin_method("unwrap_or", &[none_val, Value::I64(0)]).unwrap();
+        assert_eq!(result, Some(Value::I64(0)));
+    }
+
+    #[test]
+    fn test_result_unwrap() {
+        let ok_val = Value::Result(Arc::new(Ok(Value::I64(42))));
+        let result = try_builtin_method("unwrap", &[ok_val]).unwrap();
+        assert_eq!(result, Some(Value::I64(42)));
+
+        let err_val = Value::Result(Arc::new(Err(Value::string("error"))));
+        let result = try_builtin_method("unwrap", &[err_val]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_result_unwrap_err() {
+        let err_val = Value::Result(Arc::new(Err(Value::string("error"))));
+        let result = try_builtin_method("unwrap_err", &[err_val]).unwrap();
+        assert_eq!(result, Some(Value::string("error")));
+
+        let ok_val = Value::Result(Arc::new(Ok(Value::I64(42))));
+        let result = try_builtin_method("unwrap_err", &[ok_val]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_call_builtin_arity_mismatch() {
+        let builtin = BuiltinFn {
+            name: "test".to_string(),
+            arity: 2,
+            func: Arc::new(|args| {
+                let sum = match (&args[0], &args[1]) {
+                    (Value::I64(a), Value::I64(b)) => a + b,
+                    _ => return Err("type error".to_string()),
+                };
+                Ok(Value::I64(sum))
+            }),
+        };
+
+        // Wrong arity
+        let result = call_builtin(&builtin, vec![Value::I64(1)], None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::ArityMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn test_call_builtin_variadic() {
+        let builtin = BuiltinFn {
+            name: "sum".to_string(),
+            arity: -1, // variadic
+            func: Arc::new(|args| {
+                let mut sum = 0i64;
+                for arg in args {
+                    if let Value::I64(n) = arg {
+                        sum += n;
+                    }
+                }
+                Ok(Value::I64(sum))
+            }),
+        };
+
+        let result = call_builtin(
+            &builtin,
+            vec![Value::I64(1), Value::I64(2), Value::I64(3)],
+            None,
+        );
+        assert_eq!(result.unwrap(), Value::I64(6));
+    }
+
+    #[test]
+    fn test_call_builtin_error() {
+        let builtin = BuiltinFn {
+            name: "fail".to_string(),
+            arity: 0,
+            func: Arc::new(|_| Err("intentional error".to_string())),
+        };
+
+        let result = call_builtin(&builtin, vec![], None);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::BuiltinError { .. }
+        ));
+    }
+
+    #[test]
+    fn test_call_function_basic() {
+        let body: syn::Block = syn::parse_str("{ 42 }").unwrap();
+        let func = FunctionValue::new("test".to_string(), vec![], body);
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_function(&func, vec![], &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_call_function_with_params() {
+        let body: syn::Block = syn::parse_str("{ x }").unwrap();
+        let func = FunctionValue::new("identity".to_string(), vec!["x".to_string()], body);
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_function(&func, vec![Value::I64(99)], &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(99));
+    }
+
+    #[test]
+    fn test_call_function_arity_mismatch() {
+        let body: syn::Block = syn::parse_str("{ 42 }").unwrap();
+        let func = FunctionValue::new("test".to_string(), vec!["x".to_string()], body);
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_function(&func, vec![], &mut env, &ctx);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::ArityMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn test_call_closure_basic() {
+        let body: syn::Expr = syn::parse_str("42").unwrap();
+        let closure = ClosureValue {
+            params: vec![],
+            body: Arc::new(body),
+            captures: Arc::new(vec![]),
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_closure(&closure, vec![], &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_call_closure_with_capture() {
+        let body: syn::Expr = syn::parse_str("x").unwrap();
+        let closure = ClosureValue {
+            params: vec![],
+            body: Arc::new(body),
+            captures: Arc::new(vec![("x".to_string(), Value::I64(100))]),
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_closure(&closure, vec![], &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(100));
+    }
+
+    #[test]
+    fn test_call_closure_arity_mismatch() {
+        let body: syn::Expr = syn::parse_str("x").unwrap();
+        let closure = ClosureValue {
+            params: vec!["x".to_string()],
+            body: Arc::new(body),
+            captures: Arc::new(vec![]),
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_closure(&closure, vec![], &mut env, &ctx);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::ArityMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn test_call_value_not_callable() {
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_value(Value::I64(42), vec![], &mut env, &ctx, None);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), EvalError::TypeError { .. }));
+    }
+
+    #[test]
+    fn test_try_builtin_method_no_args() {
+        let result = try_builtin_method("len", &[]).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_try_builtin_method_unknown_method() {
+        let result = try_builtin_method("unknown_method", &[Value::I64(42)]).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_expr_call_eval() {
+        // Define a function in environment and call it
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        // First define a function: fn add(a, b) { a + b }
+        let fn_source = "fn add(a: i64, b: i64) -> i64 { a + b }";
+        let item: syn::Item = syn::parse_str(fn_source).unwrap();
+        super::super::item::eval_item(&item, &mut env, &ctx).unwrap();
+
+        // Now call it: add(10, 20)
+        let call_expr: syn::Expr = syn::parse_str("add(10, 20)").unwrap();
+        let result = call_expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(30));
+    }
+
+    #[test]
+    fn test_expr_method_call_eval() {
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        // Test a built-in method call: "hello".len()
+        let method_expr: syn::Expr = syn::parse_str(r#""hello".len()"#).unwrap();
+        let result = method_expr.eval(&mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Usize(5));
+    }
+
+    #[test]
+    fn test_expr_method_call_undefined() {
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        // Test calling an undefined method: 42.foo()
+        let method_expr: syn::Expr = syn::parse_str("42.foo()").unwrap();
+        let result = method_expr.eval(&mut env, &ctx);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::UndefinedVariable { .. }
+        ));
+    }
+
+    #[test]
+    fn test_eval_function_body_with_statements() {
+        let body: syn::Block = syn::parse_str(
+            r#"{
+            let x = 10;
+            let y = 20;
+            x + y
+        }"#,
+        )
+        .unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_function_body(&body, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(30));
+    }
+
+    #[test]
+    fn test_eval_stmt_in_function_macro_unsupported() {
+        let stmt: syn::Stmt = syn::parse_str("println!(\"test\");").unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_stmt_in_function(&stmt, &mut env, &ctx);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            EvalError::UnsupportedExpr { .. }
+        ));
+    }
+
+    #[test]
+    fn test_eval_stmt_expr_with_semicolon() {
+        let stmt: syn::Stmt = syn::parse_str("42;").unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_stmt_in_function(&stmt, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_eval_stmt_expr_without_semicolon() {
+        // Parse from a block to get a statement without semicolon
+        let block: syn::Block = syn::parse_str("{ 42 }").unwrap();
+        let stmt = &block.stmts[0];
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_stmt_in_function(stmt, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_eval_stmt_local() {
+        let stmt: syn::Stmt = syn::parse_str("let x = 100;").unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_stmt_in_function(&stmt, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+        assert_eq!(env.get("x"), Some(&Value::I64(100)));
+    }
+
+    #[test]
+    fn test_eval_stmt_item() {
+        let stmt: syn::Stmt = syn::parse_str("fn inner() -> i64 { 99 }").unwrap();
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = eval_stmt_in_function(&stmt, &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::Unit);
+        assert!(env.get("inner").is_some());
+    }
+
+    #[test]
+    fn test_call_function_with_return() {
+        let body: syn::Block = syn::parse_str("{ return 42; }").unwrap();
+        let func = FunctionValue::new("test".to_string(), vec![], body);
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_function(&func, vec![], &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_call_closure_with_param() {
+        let body: syn::Expr = syn::parse_str("x + y").unwrap();
+        let closure = ClosureValue {
+            params: vec!["x".to_string()],
+            body: Arc::new(body),
+            captures: Arc::new(vec![("y".to_string(), Value::I64(5))]),
+        };
+
+        let mut env = Environment::new();
+        let ctx = EvalContext::default();
+
+        let result = call_closure(&closure, vec![Value::I64(10)], &mut env, &ctx).unwrap();
+        assert_eq!(result, Value::I64(15));
+    }
 }

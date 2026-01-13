@@ -146,6 +146,26 @@ impl Value {
         }
     }
 
+    /// Extract as usize (converts from integer types)
+    pub fn as_usize(&self) -> Option<usize> {
+        match self {
+            Value::Usize(n) => Some(*n),
+            Value::U8(n) => Some(*n as usize),
+            Value::U16(n) => Some(*n as usize),
+            Value::U32(n) => Some(*n as usize),
+            Value::U64(n) => (*n).try_into().ok(),
+            Value::U128(n) => (*n).try_into().ok(),
+            // Signed integers (if non-negative)
+            Value::I8(n) if *n >= 0 => Some(*n as usize),
+            Value::I16(n) if *n >= 0 => Some(*n as usize),
+            Value::I32(n) if *n >= 0 => Some(*n as usize),
+            Value::I64(n) if *n >= 0 => Some(*n as usize),
+            Value::I128(n) if *n >= 0 => (*n).try_into().ok(),
+            Value::Isize(n) if *n >= 0 => Some(*n as usize),
+            _ => None,
+        }
+    }
+
     /// Extract as f64 (converts from f32)
     pub fn as_f64(&self) -> Option<f64> {
         match self {
