@@ -1726,7 +1726,7 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 
 [[package]]
 name = "treebeard"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "dashmap",
@@ -1741,7 +1741,7 @@ dependencies = [
 
 [[package]]
 name = "treebeard-design"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "oxur-odm",
 ]
