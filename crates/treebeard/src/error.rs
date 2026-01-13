@@ -275,6 +275,15 @@ pub enum EvalError {
         span: Option<Span>,
     },
 
+    /// Template expansion error.
+    #[error("template error: {message}")]
+    TemplateError {
+        /// Error message
+        message: String,
+        /// Source span
+        span: Option<Span>,
+    },
+
     /// Environment error wrapper
     #[error(transparent)]
     Environment(#[from] EnvironmentError),
@@ -308,6 +317,7 @@ impl EvalError {
             EvalError::UndefinedField { span, .. } => *span,
             EvalError::NonDivergingLetElse { span } => *span,
             EvalError::ParseError { span, .. } => *span,
+            EvalError::TemplateError { span, .. } => *span,
             EvalError::Environment(_) => None,
         }
     }

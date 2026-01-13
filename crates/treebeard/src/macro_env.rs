@@ -78,20 +78,16 @@ impl fmt::Debug for MacroDefinition {
 /// The body of a macro definition.
 ///
 /// This represents the transformation rules that define what the macro does.
-/// Initially this is a placeholder; full implementation comes in Stage 3.3.
 #[derive(Clone)]
 pub enum MacroBody {
     /// Native Rust function (for built-in macros)
     Native(Arc<dyn Fn(&[syn::Item]) -> Result<Vec<syn::Item>, String> + Send + Sync>),
 
     /// Template-based (quasiquote) - Stage 3.2
-    /// Will store the template and expansion rules
-    Template {
-        /// The quasiquoted template
-        template: String,
-        /// Reserved for template expansion logic
-        _marker: std::marker::PhantomData<()>,
-    },
+    ///
+    /// Uses the template system to construct AST with placeholders that get
+    /// filled in during macro expansion.
+    Template(crate::template::Template),
 
     /// User-defined (defmacro) - Stage 3.3
     /// Will store the macro's implementation
@@ -107,7 +103,7 @@ impl fmt::Debug for MacroBody {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MacroBody::Native(_) => write!(f, "Native(<fn>)"),
-            MacroBody::Template { template, .. } => write!(f, "Template({})", template),
+            MacroBody::Template(template) => write!(f, "Template({:?})", template),
             MacroBody::UserDefined { implementation, .. } => {
                 write!(f, "UserDefined({})", implementation)
             }
@@ -183,13 +179,11 @@ impl MacroEnvironment {
     /// # Example
     ///
     /// ```rust
-    /// use treebeard::{MacroEnvironment, MacroBody, MacroDefinition};
+    /// use treebeard::{MacroEnvironment, MacroBody, MacroDefinition, Template, TemplateNode, Value};
     ///
     /// let mut env = MacroEnvironment::new();
-    /// let body = MacroBody::Template {
-    ///     template: "placeholder".to_string(),
-    ///     _marker: std::marker::PhantomData,
-    /// };
+    /// let template = Template::new(TemplateNode::literal(Value::string("placeholder")));
+    /// let body = MacroBody::Template(template);
     /// let macro_def = MacroDefinition::new("my_macro".to_string(), vec![], body);
     /// env.define_macro(macro_def);
     ///
@@ -305,6 +299,14 @@ impl fmt::Debug for MacroEnvironment {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::template::{Template, TemplateNode};
+    use crate::Value;
+
+    /// Helper to create a simple template for testing
+    fn test_template(name: &str) -> MacroBody {
+        let node = TemplateNode::literal(Value::string(name));
+        MacroBody::Template(Template::new(node))
+    }
 
     #[test]
     fn test_macro_environment_creation() {
@@ -316,10 +318,7 @@ mod tests {
     #[test]
     fn test_define_and_lookup_macro() {
         let mut env = MacroEnvironment::new();
-        let body = MacroBody::Template {
-            template: "test".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body = test_template("test");
         let macro_def = MacroDefinition::new("my_macro".to_string(), vec![], body);
 
         env.define_macro(macro_def);
@@ -343,17 +342,11 @@ mod tests {
     fn test_macro_shadowing() {
         let mut env = MacroEnvironment::new();
 
-        let body1 = MacroBody::Template {
-            template: "first".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body1 = test_template("first");
         let macro1 = MacroDefinition::new("test".to_string(), vec![], body1);
         env.define_macro(macro1);
 
-        let body2 = MacroBody::Template {
-            template: "second".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body2 = test_template("second");
         let macro2 = MacroDefinition::new("test".to_string(), vec!["x".to_string()], body2);
         env.define_macro(macro2);
 
@@ -365,18 +358,12 @@ mod tests {
     #[test]
     fn test_macro_environment_with_parent() {
         let mut parent = MacroEnvironment::new();
-        let body1 = MacroBody::Template {
-            template: "parent_macro".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body1 = test_template("parent_macro");
         let macro1 = MacroDefinition::new("parent_mac".to_string(), vec![], body1);
         parent.define_macro(macro1);
 
         let mut child = MacroEnvironment::with_parent(parent);
-        let body2 = MacroBody::Template {
-            template: "child_macro".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body2 = test_template("child_macro");
         let macro2 = MacroDefinition::new("child_mac".to_string(), vec![], body2);
         child.define_macro(macro2);
 
@@ -419,16 +406,10 @@ mod tests {
     fn test_macro_names() {
         let mut env = MacroEnvironment::new();
 
-        let body1 = MacroBody::Template {
-            template: "m1".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body1 = test_template("m1");
         env.define_macro(MacroDefinition::new("macro1".to_string(), vec![], body1));
 
-        let body2 = MacroBody::Template {
-            template: "m2".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body2 = test_template("m2");
         env.define_macro(MacroDefinition::new("macro2".to_string(), vec![], body2));
 
         let names = env.macro_names();
@@ -441,10 +422,7 @@ mod tests {
     fn test_clear_macros() {
         let mut env = MacroEnvironment::new();
 
-        let body = MacroBody::Template {
-            template: "test".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body = test_template("test");
         env.define_macro(MacroDefinition::new("test".to_string(), vec![], body));
 
         assert_eq!(env.len(), 1);
@@ -456,10 +434,7 @@ mod tests {
     #[test]
     fn test_clone_without_parent() {
         let mut parent = MacroEnvironment::new();
-        let body = MacroBody::Template {
-            template: "parent".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body = test_template("parent");
         parent.define_macro(MacroDefinition::new("parent_mac".to_string(), vec![], body));
 
         let child = MacroEnvironment::with_parent(parent);
@@ -472,10 +447,7 @@ mod tests {
 
     #[test]
     fn test_macro_definition_expansion_count() {
-        let body = MacroBody::Template {
-            template: "test".to_string(),
-            _marker: std::marker::PhantomData,
-        };
+        let body = test_template("test");
         let mut macro_def = MacroDefinition::new("test".to_string(), vec![], body);
 
         assert_eq!(macro_def.expansion_count, 0);
