@@ -90,13 +90,10 @@ pub enum MacroBody {
     Template(crate::template::Template),
 
     /// User-defined (defmacro) - Stage 3.3
-    /// Will store the macro's implementation
-    UserDefined {
-        /// The macro implementation (to be defined)
-        implementation: String,
-        /// Reserved for expansion logic
-        _marker: std::marker::PhantomData<()>,
-    },
+    ///
+    /// Stores a user-defined macro function that transforms AST at expansion time.
+    /// The function takes arguments (as Values) and returns a Template or AST Value.
+    UserDefined(Arc<dyn Fn(&[crate::Value]) -> Result<crate::Value, String> + Send + Sync>),
 }
 
 impl fmt::Debug for MacroBody {
@@ -104,9 +101,7 @@ impl fmt::Debug for MacroBody {
         match self {
             MacroBody::Native(_) => write!(f, "Native(<fn>)"),
             MacroBody::Template(template) => write!(f, "Template({:?})", template),
-            MacroBody::UserDefined { implementation, .. } => {
-                write!(f, "UserDefined({})", implementation)
-            }
+            MacroBody::UserDefined(_) => write!(f, "UserDefined(<fn>)"),
         }
     }
 }
@@ -218,6 +213,119 @@ impl MacroEnvironment {
     /// Check if a macro is defined.
     pub fn has_macro(&self, name: &str) -> bool {
         self.get_macro(name).is_some()
+    }
+
+    /// Call a macro with the given arguments and return the expanded result.
+    ///
+    /// This method handles all three macro body types:
+    /// - Native: Calls the native Rust function (expects syn::Item arguments)
+    /// - Template: Expands the template with bindings from arguments
+    /// - UserDefined: Calls the user-defined function with Value arguments
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Name of the macro to call
+    /// * `args` - Arguments to pass to the macro
+    ///
+    /// # Returns
+    ///
+    /// Returns the expanded result as a `Value`, or an error message.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The macro is not found
+    /// - The macro expansion fails
+    /// - Arguments are invalid for the macro type
+    pub fn expand_macro(&self, name: &str, args: &[crate::Value]) -> Result<crate::Value, String> {
+        let macro_def = self
+            .get_macro(name)
+            .ok_or_else(|| format!("Macro '{}' not found", name))?;
+
+        match &macro_def.body {
+            MacroBody::Native(_) => {
+                // Native macros expect syn::Item arguments
+                // This is a simplified implementation - full implementation would
+                // convert Values to syn::Items
+                Err(format!(
+                    "Native macro '{}' cannot be expanded with Value arguments",
+                    name
+                ))
+            }
+            MacroBody::Template(template) => {
+                // Template macros expect arguments to match template parameters
+                if args.len() != macro_def.params.len() {
+                    return Err(format!(
+                        "Macro '{}' expects {} arguments, got {}",
+                        name,
+                        macro_def.params.len(),
+                        args.len()
+                    ));
+                }
+
+                // Build bindings from parameters and arguments
+                let mut bindings = crate::template::TemplateBindings::new();
+                for (param, arg) in macro_def.params.iter().zip(args.iter()) {
+                    bindings.bind(param.clone(), arg.clone());
+                }
+
+                // Expand the template
+                template
+                    .expand(&bindings)
+                    .map_err(|e| format!("Template expansion failed: {}", e))
+            }
+            MacroBody::UserDefined(func) => {
+                // User-defined macros are called directly with Value arguments
+                func(args).map_err(|e| format!("User-defined macro '{}' failed: {}", name, e))
+            }
+        }
+    }
+
+    /// Define a user-defined macro with a closure.
+    ///
+    /// This is a convenience method for creating UserDefined macros.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Name of the macro
+    /// * `params` - Parameter names
+    /// * `func` - The macro transformation function
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use treebeard::{MacroEnvironment, Value};
+    /// use std::sync::Arc;
+    ///
+    /// let mut env = MacroEnvironment::new();
+    ///
+    /// // Define a simple macro that returns its first argument
+    /// env.define_user_macro(
+    ///     "identity",
+    ///     vec!["x".to_string()],
+    ///     Arc::new(|args| {
+    ///         if args.is_empty() {
+    ///             Err("identity requires one argument".to_string())
+    ///         } else {
+    ///             Ok(args[0].clone())
+    ///         }
+    ///     }),
+    /// );
+    ///
+    /// // Expand the macro
+    /// let result = env.expand_macro("identity", &[Value::I64(42)]).unwrap();
+    /// assert_eq!(result, Value::I64(42));
+    /// ```
+    pub fn define_user_macro(
+        &mut self,
+        name: impl Into<String>,
+        params: Vec<String>,
+        func: Arc<dyn Fn(&[crate::Value]) -> Result<crate::Value, String> + Send + Sync>,
+    ) {
+        let name_string = name.into();
+        let body = MacroBody::UserDefined(func);
+        let macro_def = MacroDefinition::new(name_string, params, body);
+        self.define_macro(macro_def);
     }
 
     /// Get all macro names defined in this environment (not including parent).
@@ -455,5 +563,243 @@ mod tests {
         assert_eq!(macro_def.expansion_count, 1);
         macro_def.record_expansion();
         assert_eq!(macro_def.expansion_count, 2);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STAGE 3.3: DEFMACRO TESTS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_define_user_macro() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a simple identity macro
+        env.define_user_macro(
+            "identity",
+            vec!["x".to_string()],
+            Arc::new(|args| {
+                if args.is_empty() {
+                    Err("identity requires one argument".to_string())
+                } else {
+                    Ok(args[0].clone())
+                }
+            }),
+        );
+
+        assert!(env.has_macro("identity"));
+        let macro_def = env.get_macro("identity").unwrap();
+        assert_eq!(macro_def.name, "identity");
+        assert_eq!(macro_def.params.len(), 1);
+    }
+
+    #[test]
+    fn test_expand_user_macro_simple() {
+        let mut env = MacroEnvironment::new();
+
+        // Define identity macro
+        env.define_user_macro(
+            "identity",
+            vec!["x".to_string()],
+            Arc::new(|args| Ok(args[0].clone())),
+        );
+
+        // Expand it
+        let result = env.expand_macro("identity", &[Value::I64(42)]).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_expand_user_macro_with_transformation() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a macro that doubles its argument
+        env.define_user_macro(
+            "double",
+            vec!["x".to_string()],
+            Arc::new(|args| match &args[0] {
+                Value::I64(n) => Ok(Value::I64(n * 2)),
+                _ => Err("double requires integer argument".to_string()),
+            }),
+        );
+
+        // Expand it
+        let result = env.expand_macro("double", &[Value::I64(21)]).unwrap();
+        assert_eq!(result, Value::I64(42));
+    }
+
+    #[test]
+    fn test_expand_user_macro_error() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a macro that always fails
+        env.define_user_macro(
+            "fail",
+            vec![],
+            Arc::new(|_| Err("This macro always fails".to_string())),
+        );
+
+        // Try to expand it
+        let result = env.expand_macro("fail", &[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("always fails"));
+    }
+
+    #[test]
+    fn test_expand_macro_not_found() {
+        let env = MacroEnvironment::new();
+        let result = env.expand_macro("nonexistent", &[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found"));
+    }
+
+    #[test]
+    fn test_expand_template_macro() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a template macro: `(list ,x ,y)`
+        let template = Template::new(TemplateNode::list(vec![
+            TemplateNode::literal(Value::string("list")),
+            TemplateNode::unquote("x"),
+            TemplateNode::unquote("y"),
+        ]));
+
+        let macro_def = MacroDefinition::new(
+            "make_list".to_string(),
+            vec!["x".to_string(), "y".to_string()],
+            MacroBody::Template(template),
+        );
+        env.define_macro(macro_def);
+
+        // Expand it
+        let result = env
+            .expand_macro("make_list", &[Value::I64(1), Value::I64(2)])
+            .unwrap();
+
+        match result {
+            Value::Vec(v) => {
+                assert_eq!(v.len(), 3);
+                assert_eq!(v[0], Value::string("list"));
+                assert_eq!(v[1], Value::I64(1));
+                assert_eq!(v[2], Value::I64(2));
+            }
+            _ => panic!("Expected Vec, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_expand_template_macro_arity_mismatch() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a template macro with 2 parameters
+        let template = Template::new(TemplateNode::unquote("x"));
+        let macro_def = MacroDefinition::new(
+            "test".to_string(),
+            vec!["x".to_string(), "y".to_string()],
+            MacroBody::Template(template),
+        );
+        env.define_macro(macro_def);
+
+        // Try to expand with wrong number of arguments
+        let result = env.expand_macro("test", &[Value::I64(1)]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 2 arguments"));
+    }
+
+    #[test]
+    fn test_expand_template_macro_with_splice() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a template macro: `(progn ,@body)`
+        let template = Template::new(TemplateNode::list(vec![
+            TemplateNode::literal(Value::string("progn")),
+            TemplateNode::splice("body"),
+        ]));
+
+        let macro_def = MacroDefinition::new(
+            "progn".to_string(),
+            vec!["body".to_string()],
+            MacroBody::Template(template),
+        );
+        env.define_macro(macro_def);
+
+        // Expand it
+        let body = Value::vec(vec![Value::string("stmt1"), Value::string("stmt2")]);
+        let result = env.expand_macro("progn", &[body]).unwrap();
+
+        match result {
+            Value::Vec(v) => {
+                assert_eq!(v.len(), 3); // progn, stmt1, stmt2
+                assert_eq!(v[0], Value::string("progn"));
+                assert_eq!(v[1], Value::string("stmt1"));
+                assert_eq!(v[2], Value::string("stmt2"));
+            }
+            _ => panic!("Expected Vec, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_user_macro_returns_template() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a user macro that constructs and returns a template
+        env.define_user_macro(
+            "when",
+            vec!["test".to_string(), "body".to_string()],
+            Arc::new(|args| {
+                // Construct: (if test body)
+                Ok(Value::vec(vec![
+                    Value::string("if"),
+                    args[0].clone(),
+                    args[1].clone(),
+                ]))
+            }),
+        );
+
+        // Expand it
+        let result = env
+            .expand_macro("when", &[Value::Bool(true), Value::string("action")])
+            .unwrap();
+
+        match result {
+            Value::Vec(v) => {
+                assert_eq!(v.len(), 3);
+                assert_eq!(v[0], Value::string("if"));
+                assert_eq!(v[1], Value::Bool(true));
+                assert_eq!(v[2], Value::string("action"));
+            }
+            _ => panic!("Expected Vec, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_user_macro_variadic() {
+        let mut env = MacroEnvironment::new();
+
+        // Define a variadic macro that takes any number of arguments
+        env.define_user_macro(
+            "list",
+            vec![], // No fixed params - accepts any number
+            Arc::new(|args| Ok(Value::vec(args.to_vec()))),
+        );
+
+        // Expand with different numbers of arguments
+        let result1 = env.expand_macro("list", &[]).unwrap();
+        match result1 {
+            Value::Vec(v) => assert_eq!(v.len(), 0),
+            _ => panic!("Expected empty Vec"),
+        }
+
+        let result2 = env
+            .expand_macro("list", &[Value::I64(1), Value::I64(2), Value::I64(3)])
+            .unwrap();
+        match result2 {
+            Value::Vec(v) => {
+                assert_eq!(v.len(), 3);
+                assert_eq!(v[0], Value::I64(1));
+                assert_eq!(v[1], Value::I64(2));
+                assert_eq!(v[2], Value::I64(3));
+            }
+            _ => panic!("Expected Vec with 3 elements"),
+        }
     }
 }
