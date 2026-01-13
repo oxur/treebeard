@@ -157,27 +157,11 @@ impl fmt::Display for MacroError {
 impl std::error::Error for MacroError {}
 
 // ═══════════════════════════════════════════════════════════════════════
-// MACRO ENVIRONMENT (PLACEHOLDER FOR PHASE 3)
+// MACRO ENVIRONMENT - Re-exported from macro_env module
 // ═══════════════════════════════════════════════════════════════════════
 
-/// Macro environment for compile-time macro expansion.
-///
-/// This is a placeholder for Phase 3: Macro System.
-/// Currently empty, but will contain macro definitions and expansion state.
-#[derive(Debug, Clone, Default)]
-pub struct MacroEnvironment {
-    /// Reserved for future macro storage
-    _marker: std::marker::PhantomData<()>,
-}
-
-impl MacroEnvironment {
-    /// Create a new empty macro environment.
-    pub fn new() -> Self {
-        Self {
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
+// MacroEnvironment is now implemented in the macro_env module (Phase 3, Stage 3.1)
+pub use crate::macro_env::MacroEnvironment;
 
 // ═══════════════════════════════════════════════════════════════════════
 // REPL COMMAND (PLACEHOLDER FOR PHASE 4)
@@ -417,11 +401,7 @@ mod tests {
         assert_eq!(err.macro_name.unwrap(), "my_macro");
     }
 
-    #[test]
-    fn test_macro_environment_creation() {
-        let env = MacroEnvironment::new();
-        let _ = env; // Just ensure it compiles and can be created
-    }
+    // MacroEnvironment tests are now in the macro_env module
 
     #[test]
     fn test_repl_command_creation() {

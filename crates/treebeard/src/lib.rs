@@ -30,6 +30,7 @@ pub mod eval;
 pub mod evaluator;
 pub mod frontend;
 pub mod frontends;
+pub mod macro_env;
 pub mod ownership;
 pub mod value;
 
@@ -38,9 +39,8 @@ pub use context::EvalContext;
 pub use environment::{Binding, BindingMode, Environment, ScopeGuard};
 pub use error::{EnvironmentError, EvalError, Result, TreebeardError};
 pub use eval::{eval_block, eval_block_stmts, eval_expr, eval_stmt, ControlFlow, Evaluate};
-pub use frontend::{
-    LanguageFrontend, MacroEnvironment, MacroError, ParseError, ReplCommand, SourceLocation,
-};
+pub use frontend::{LanguageFrontend, MacroError, ParseError, ReplCommand, SourceLocation};
+pub use macro_env::{MacroBody, MacroDefinition, MacroEnvironment};
 pub use value::{
     BuiltinFn, BuiltinFnPtr, ClosureValue, CompiledFn, EnumData, EnumValue, FunctionValue,
     HashableValue, StructValue, Value, ValueRef, ValueRefMut,
