@@ -5,4 +5,10 @@
 
 pub mod rust;
 
+#[cfg(feature = "oxur")]
+pub mod oxur;
+
 pub use rust::RustFrontend;
+
+#[cfg(feature = "oxur")]
+pub use oxur::OxurFrontend;

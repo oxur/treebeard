@@ -39,3 +39,6 @@ serde_json = "1.0"
 
 # Design documentation management (using local oxur repo for latest updates)
 oxur-odm = { version = "0.1.0", path = "../oxur/crates/oxur-odm" }
+
+# Oxur AST bridge (for Oxur frontend)
+oxur-ast = { version = "0.1.0", path = "../oxur/crates/oxur-ast" }

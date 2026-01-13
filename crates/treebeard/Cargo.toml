@@ -19,5 +19,12 @@ thiserror = { workspace = true }
 dashmap = { workspace = true }
 indexmap = "2"
 
+# Optional: Oxur language support
+oxur-ast = { workspace = true, optional = true }
+
 [dev-dependencies]
 pretty_assertions = "1"
+
+[features]
+default = ["oxur"]
+oxur = ["dep:oxur-ast"]
