@@ -28,6 +28,7 @@ pub mod environment;
 pub mod error;
 pub mod eval;
 pub mod evaluator;
+pub mod expansion;
 pub mod frontend;
 pub mod frontends;
 pub mod macro_env;
